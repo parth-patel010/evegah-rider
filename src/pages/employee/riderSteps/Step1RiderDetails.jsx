@@ -178,11 +178,6 @@ export default function Step1RiderDetails() {
       }
 
       clearFieldError("aadhaar");
-      setOtpModalOpen(false);
-      setOtpValue("");
-      setOtpError("");
-      setPendingAadhaar("");
-
       setAadhaarStatus("verified");
       setAadhaarMessage("Aadhaar verified successfully via DigiLocker.");
       showBanner("success", "Aadhaar verified via DigiLocker.");
