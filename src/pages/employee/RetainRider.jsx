@@ -25,6 +25,20 @@ const toDateTimeLocal = (date = new Date()) => {
 };
 
 function RetainRiderInner() {
+    // Payment mode change handler for split/cash/online
+    const handlePaymentModeChange = (mode) => {
+      if (mode === "cash") {
+        updateForm({ paymentMode: mode, cashAmount: formData.totalAmount || 0, onlineAmount: 0 });
+      } else if (mode === "online") {
+        updateForm({ paymentMode: mode, cashAmount: 0, onlineAmount: formData.totalAmount || 0 });
+      } else if (mode === "split") {
+        const total = Number(formData.totalAmount || 0);
+        const nextCash = Math.round(total / 2);
+        updateForm({ paymentMode: mode, cashAmount: nextCash, onlineAmount: total - nextCash });
+      } else {
+        updateForm({ paymentMode: mode });
+      }
+    };
   const { formData, updateForm, resetForm } = useRiderForm();
     // Set default rentalStart to now when a rider is selected and value is empty
     useEffect(() => {
@@ -680,19 +694,17 @@ function RetainRiderInner() {
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* Return Date (auto-calculated, read-only) */}
+              {/* Return Date (editable) */}
               <div>
                 <label className="label">Return Date</label>
                 <input
                   type="datetime-local"
                   className="input"
                   value={formData.rentalEnd || ""}
-                  readOnly
-                  tabIndex={-1}
-                  style={{ background: '#f9fafb', cursor: 'not-allowed' }}
+                  onChange={e => updateForm({ rentalEnd: e.target.value })}
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Auto: calculated from package
+                  Auto: calculated from package, but you can edit
                 </p>
               </div>
               {/* Payment Mode */}
