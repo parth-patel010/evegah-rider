@@ -25,6 +25,20 @@ const toDateTimeLocal = (date = new Date()) => {
 };
 
 function RetainRiderInner() {
+      // State for completion message
+      const [retainSuccess, setRetainSuccess] = useState(false);
+
+      // Handle split payment field changes
+      const handleCashChange = (val) => {
+        const cash = Number(val) || 0;
+        const total = Number(formData.totalAmount || 0);
+        updateForm({ cashAmount: cash, onlineAmount: Math.max(0, total - cash) });
+      };
+      const handleOnlineChange = (val) => {
+        const online = Number(val) || 0;
+        const total = Number(formData.totalAmount || 0);
+        updateForm({ onlineAmount: online, cashAmount: Math.max(0, total - online) });
+      };
     // Payment mode change handler for split/cash/online
     const handlePaymentModeChange = (mode) => {
       if (mode === "cash") {
@@ -755,6 +769,32 @@ function RetainRiderInner() {
                 <p className="mt-1 text-xs text-gray-500">Auto: amount + deposit</p>
               </div>
             </div>
+            {formData.paymentMode === "split" && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="label">Cash Paid</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={formData.totalAmount ?? 0}
+                    className="input"
+                    value={formData.cashAmount ?? 0}
+                    onChange={e => handleCashChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label">Online Paid</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={formData.totalAmount ?? 0}
+                    className="input"
+                    value={formData.onlineAmount ?? 0}
+                    onChange={e => handleOnlineChange(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
@@ -1067,8 +1107,13 @@ function RetainRiderInner() {
                     UPI QR is not configured. Set `VITE_EVEGAH_UPI_ID` in your `.env`.
                   </p>
                 )}
-
-                <div className="text-sm text-evegah-text space-y-1">
+                {/* Temp Payment QR */}
+                <div className="mt-4">
+                  <h4 className="font-medium text-evegah-text">Temporary Payment QR</h4>
+                  <QRCodeCanvas value="upi://pay?pa=TEMP@upi&pn=Temp%20Payee&am=1&cu=INR" size={120} />
+                  <div className="text-xs text-gray-500 mt-1">For demo/testing only</div>
+                </div>
+                <div className="text-sm text-evegah-text space-y-1 mt-4">
                   <div>
                     <span className="text-gray-500">Total Amount:</span> {amount}
                   </div>
@@ -1084,7 +1129,10 @@ function RetainRiderInner() {
                   <button
                     type="button"
                     className="btn-primary disabled:opacity-60"
-                    onClick={handleComplete}
+                    onClick={async () => {
+                      await handleComplete();
+                      setRetainSuccess(true);
+                    }}
                     disabled={savingPayment}
                   >
                     {savingPayment ? "Saving..." : "Complete"}
@@ -1092,6 +1140,19 @@ function RetainRiderInner() {
                 </div>
 
                 {paymentError ? <p className="error">{paymentError}</p> : null}
+                {retainSuccess && (
+                  <div className="mt-4">
+                    <div className="text-green-600 font-semibold mb-2">Rider retained successfully</div>
+                    <div className="flex gap-2">
+                      <button type="button" className="btn-primary" onClick={handleSendWhatsApp}>
+                        Send Receipt to WhatsApp
+                      </button>
+                      <button type="button" className="btn-outline" onClick={handleDownloadReceipt}>
+                        Download Receipt
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
