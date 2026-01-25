@@ -7,11 +7,22 @@ import { BATTERY_ID_OPTIONS } from "../../utils/batteryIds";
 import { VEHICLE_ID_OPTIONS } from "../../utils/vehicleIds";
 import { apiFetch } from "../../config/api";
 import { RiderFormProvider, useRiderForm } from "./RiderFormContext";
+import { downloadRiderReceiptPdf } from "../../utils/riderReceiptPdf";
 
 const sanitizeNumericInput = (value, maxLength) =>
   String(value || "")
     .replace(/\D/g, "")
     .slice(0, maxLength);
+
+const toDateTimeLocal = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mi = pad(date.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+};
 
 function RetainRiderInner() {
   const { formData, updateForm, resetForm } = useRiderForm();
@@ -86,7 +97,7 @@ function RetainRiderInner() {
   const selected = Boolean(formData.isRetainRider && formData.existingRiderId);
 
   const PACKAGE_OPTIONS = ["hourly", "daily", "weekly", "monthly"];
-  const PAYMENT_OPTIONS = ["cash", "online"];
+  const PAYMENT_OPTIONS = ["cash", "online", "split"];
   const BIKE_MODEL_OPTIONS = ["MINK", "CITY", "KING"];
   const ACCESSORY_OPTIONS = [
     { key: "mobile_holder", label: "Mobile holder" },
@@ -180,19 +191,6 @@ function RetainRiderInner() {
     setBatteryQuery("");
   };
 
-  const toLocalDateTimeInput = (value) => {
-    if (!value) return "";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "";
-    const pad2 = (n) => String(n).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    const mm = pad2(d.getMonth() + 1);
-    const dd = pad2(d.getDate());
-    const hh = pad2(d.getHours());
-    const min = pad2(d.getMinutes());
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-  };
-
   const prefillFromLastRental = async (riderId) => {
     if (!riderId) return;
     try {
@@ -257,7 +255,7 @@ function RetainRiderInner() {
     if (active?.id) {
       updateForm({
         activeRentalId: active.id,
-        rentalStart: toLocalDateTimeInput(active.start_time),
+        rentalStart: toDateTimeLocal(active.start_time),
         rentalPackage: active.rental_package || formData.rentalPackage || "daily",
         bikeId: String(active.bike_id || "").trim() || formData.bikeId,
         batteryId: String(active.current_battery_id || active.battery_id || "").trim() || formData.batteryId,
@@ -420,16 +418,99 @@ function RetainRiderInner() {
       }
 
       alert(isUpdatingActiveRental ? "Rental updated" : "Payment recorded");
-
-      resetForm();
-      setResults([]);
-      setSearchName("");
-      setSearchPhone("");
+      setCompleted(true);
+      setRegistration({ id: formData.existingRiderId }); // minimal registration for receipt
     } catch (e) {
       setPaymentError(String(e?.message || e || "Unable to save payment"));
     } finally {
       setSavingPayment(false);
     }
+  };
+
+  const [completed, setCompleted] = useState(false);
+  const [registration, setRegistration] = useState(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsAppStatus, setWhatsAppStatus] = useState("");
+  const [whatsAppFallback, setWhatsAppFallback] = useState(null);
+
+  const buildReceiptPayload = (snapshot) => ({
+    fullName: snapshot?.fullName || snapshot?.name || "",
+    name: snapshot?.name || snapshot?.fullName || "",
+    phone: snapshot?.phone || "",
+    mobile: snapshot?.mobile || snapshot?.phone || "",
+    operationalZone: snapshot?.operationalZone || snapshot?.zone || "",
+    agreementAccepted: Boolean(snapshot?.agreementAccepted),
+    agreementDate: snapshot?.agreementDate || null,
+    issuedByName: snapshot?.issuedByName || null,
+    rentalStart: snapshot?.rentalStart || null,
+    rentalEnd: snapshot?.rentalEnd || null,
+    rentalPackage: snapshot?.rentalPackage || null,
+    bikeModel: snapshot?.bikeModel || null,
+    bikeId: snapshot?.bikeId || null,
+    batteryId: snapshot?.batteryId || null,
+    vehicleNumber: snapshot?.vehicleNumber || snapshot?.bikeId || null,
+    accessories: Array.isArray(snapshot?.accessories) ? snapshot.accessories : [],
+    otherAccessories: snapshot?.otherAccessories || null,
+    paymentMode: snapshot?.paymentMode || null,
+    rentalAmount: snapshot?.rentalAmount ?? null,
+    securityDeposit: snapshot?.securityDeposit ?? null,
+    totalAmount: snapshot?.totalAmount ?? null,
+    amountPaid: snapshot?.amountPaid ?? snapshot?.paidAmount ?? snapshot?.totalAmount ?? null,
+    riderSignature: typeof snapshot?.riderSignature === "string" ? snapshot.riderSignature : null,
+  });
+
+  const handleDownloadReceipt = async () => {
+    setWhatsAppStatus("");
+    setWhatsAppFallback(null);
+    try {
+      const snapshot = formData;
+      await downloadRiderReceiptPdf({ formData: buildReceiptPayload(snapshot), registration });
+    } catch (e) {
+      setWhatsAppStatus(
+        e?.message ? `Unable to generate receipt: ${e.message}` : "Unable to generate receipt."
+      );
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    setWhatsAppStatus("");
+    setWhatsAppFallback(null);
+    const snapshot = formData;
+    const phoneDigits = String(snapshot?.phone || "").replace(/\D/g, "").slice(0, 10);
+    if (phoneDigits.length !== 10) {
+      setWhatsAppStatus("Valid 10-digit mobile number is required.");
+      return;
+    }
+    const receiptPayload = buildReceiptPayload(snapshot);
+    setSendingWhatsApp(true);
+    try {
+      const res = await apiFetch("/api/whatsapp/send-receipt", {
+        method: "POST",
+        body: {
+          to: phoneDigits,
+          formData: receiptPayload,
+          registration,
+        },
+      });
+      if (res?.sent) {
+        setWhatsAppStatus("Receipt sent on WhatsApp.");
+      } else if (res?.mediaUrl) {
+        setWhatsAppFallback({ phoneDigits, mediaUrl: res.mediaUrl });
+        setWhatsAppStatus(String(res?.reason || res?.error || "Unable to send via WhatsApp Cloud API."));
+      } else {
+        setWhatsAppStatus(String(res?.reason || res?.error || "Unable to send receipt on WhatsApp."));
+      }
+    } catch (e) {
+      setWhatsAppStatus(String(e?.message || e || "Unable to send on WhatsApp"));
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
+  const openManualWhatsApp = () => {
+    if (!whatsAppFallback?.phoneDigits || !whatsAppFallback?.mediaUrl) return;
+    const text = encodeURIComponent(`EVegah Receipt (PDF): ${whatsAppFallback.mediaUrl}`);
+    window.open(`https://wa.me/91${whatsAppFallback.phoneDigits}?text=${text}`, "_self");
   };
 
   return (
@@ -613,11 +694,15 @@ function RetainRiderInner() {
                 <select
                   className="select"
                   value={formData.paymentMode || "cash"}
-                  onChange={(e) => updateForm({ paymentMode: e.target.value })}
+                  onChange={(e) => handlePaymentModeChange(e.target.value)}
                 >
                   {PAYMENT_OPTIONS.map((p) => (
                     <option key={p} value={p}>
-                      {p === "online" ? "Online" : "Cash"}
+                      {p === "online"
+                        ? "Online"
+                        : p === "split"
+                        ? "Split (cash + online)"
+                        : "Cash"}
                     </option>
                   ))}
                 </select>
@@ -874,6 +959,7 @@ function RetainRiderInner() {
                 ref={preRidePhotosInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 multiple
                 className="hidden"
                 onChange={(e) => {
