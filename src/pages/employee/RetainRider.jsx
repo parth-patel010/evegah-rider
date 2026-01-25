@@ -566,31 +566,7 @@ function RetainRiderInner() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="label">Rental Start Date &amp; Time</label>
-                <input
-                  type="datetime-local"
-                  className="input"
-                  value={formData.rentalStart || ""}
-                  onChange={(e) => updateForm({ rentalStart: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label">Return Date</label>
-                <input
-                  type="datetime-local"
-                  className="input"
-                  value={formData.rentalEnd || ""}
-                  onChange={(e) => updateForm({ rentalEnd: e.target.value })}
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Auto: calculated from package
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
+                <div>
                 <label className="label">Rental Package</label>
                 <select
                   className="select"
@@ -603,6 +579,35 @@ function RetainRiderInner() {
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
+
+              
+              <div>
+                <label className="label">Rental Start Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={formData.rentalStart || ""}
+                  onChange={(e) => updateForm({ rentalStart: e.target.value })}
+                />
+              </div>
+              
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+                <div>
+                <label className="label">Return Date</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={formData.rentalEnd || ""}
+                  onChange={(e) => updateForm({ rentalEnd: e.target.value })}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Auto: calculated from package
+                </p>
+              </div>
+
               <div>
                 <label className="label">Payment Mode</label>
                 <select
