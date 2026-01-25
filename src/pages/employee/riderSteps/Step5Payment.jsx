@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
-import { useRiderForm } from "../RiderFormContext";
+import { useRiderForm } from "../useRiderForm";
 import { apiFetch } from "../../../config/api";
 import { downloadRiderReceiptPdf } from "../../../utils/riderReceiptPdf";
 import useAuth from "../../../hooks/useAuth";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useRiderForm } from "../RiderFormContext";
+import { useRiderForm } from "../useRiderForm";
 import { BATTERY_ID_OPTIONS } from "../../../utils/batteryIds";
 import { VEHICLE_ID_OPTIONS } from "../../../utils/vehicleIds";
 import { apiFetch } from "../../../config/api";

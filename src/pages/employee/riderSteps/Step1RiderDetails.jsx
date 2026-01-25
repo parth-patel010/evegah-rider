@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Upload } from "lucide-react";
 import { lookupRider } from "../../../utils/riderLookup";
-import { useRiderForm } from "../RiderFormContext";
+import { useRiderForm } from "../useRiderForm";
 import { apiFetch, apiFetchBlob } from "../../../config/api";
 import {
   getImageDataUrl,

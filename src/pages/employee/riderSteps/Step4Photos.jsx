@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Upload, RotateCcw } from "lucide-react";
-import { useRiderForm } from "../RiderFormContext";
+import { useRiderForm } from "../useRiderForm";
 import {
   getImageDataUrl,
   uploadCompressedImage,

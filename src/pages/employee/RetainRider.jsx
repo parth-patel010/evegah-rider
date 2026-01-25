@@ -6,7 +6,8 @@ import useAuth from "../../hooks/useAuth";
 import { BATTERY_ID_OPTIONS } from "../../utils/batteryIds";
 import { VEHICLE_ID_OPTIONS } from "../../utils/vehicleIds";
 import { apiFetch } from "../../config/api";
-import { RiderFormProvider, useRiderForm } from "./RiderFormContext";
+import { RiderFormProvider } from "./RiderFormContext";
+import { useRiderForm } from "./useRiderForm";
 import { downloadRiderReceiptPdf } from "../../utils/riderReceiptPdf";
 
 const sanitizeNumericInput = (value, maxLength) =>
