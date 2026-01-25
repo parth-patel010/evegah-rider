@@ -26,6 +26,18 @@ const toDateTimeLocal = (date = new Date()) => {
 
 function RetainRiderInner() {
   const { formData, updateForm, resetForm } = useRiderForm();
+    // Set default rentalStart and rentalEnd when a rider is selected and values are empty
+    useEffect(() => {
+      if (formData.isRetainRider && formData.existingRiderId) {
+        if (!formData.rentalStart) {
+          updateForm({ rentalStart: toDateTimeLocal(new Date()) });
+        }
+        if (!formData.rentalEnd) {
+          // rentalEnd will be auto-calculated by RiderFormContext effect, but set fallback here
+          updateForm({ rentalEnd: toDateTimeLocal(new Date()) });
+        }
+      }
+    }, [formData.isRetainRider, formData.existingRiderId]);
   const { user } = useAuth();
 
   const preRidePhotosInputRef = useRef(null);
