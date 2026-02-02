@@ -268,14 +268,14 @@ export default function Dashboard() {
   const { counts: zoneCounts, loading: zoneCountsLoading } =
     useVehicleZoneCounts();
 
-    const PAGE_SIZE = 10;
+  const PAGE_SIZE = 10;
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsRow, setDetailsRow] = useState(null);
 
   const [drafts, setDrafts] = useState([]);
   const [draftsLoading, setDraftsLoading] = useState(false);
-    const [draftPage, setDraftPage] = useState(1);
+  const [draftPage, setDraftPage] = useState(1);
 
   const [swaps, setSwaps] = useState([]);
   const [swapsLoading, setSwapsLoading] = useState(false);
@@ -290,7 +290,7 @@ export default function Dashboard() {
   const [activeRentals, setActiveRentals] = useState([]);
   const [activeLoading, setActiveLoading] = useState(false);
   const [banner, setBanner] = useState(null);
-    const [duePage, setDuePage] = useState(1);
+  const [duePage, setDuePage] = useState(1);
 
   const bannerStyles = {
     info: "bg-blue-50 border-blue-200 text-blue-700",
@@ -470,9 +470,8 @@ export default function Dashboard() {
 
       {banner && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm mb-6 ${
-            bannerStyles[banner.type] || bannerStyles.info
-          }`}
+          className={`rounded-xl border px-4 py-3 text-sm mb-6 ${bannerStyles[banner.type] || bannerStyles.info
+            }`}
         >
           {banner.message}
         </div>
@@ -636,52 +635,51 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-      {/* PAYMENT DUES TABLE */}
-      <div className="card">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-evegah-bg border border-evegah-border">
-                <ClipboardList className="h-5 w-5 text-evegah-text" />
-              </span>
-              <h2 className="font-medium">Rider Payment Due</h2>
+        {/* PAYMENT DUES TABLE */}
+        <div className="card">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-evegah-bg border border-evegah-border">
+                  <ClipboardList className="h-5 w-5 text-evegah-text" />
+                </span>
+                <h2 className="font-medium">Rider Payment Due</h2>
+              </div>
+              <p className="text-sm text-gray-500">
+                Riders with pending dues.
+              </p>
             </div>
-            <p className="text-sm text-gray-500">
-              Riders with pending dues.
-            </p>
           </div>
-        </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 border-b border-evegah-border">
-                <th className="py-2 pr-3 font-medium">Rider</th>
-                <th className="py-2 pr-3 font-medium">Phone</th>
-                <th className="py-2 pr-3 font-medium">Due Date</th>
-                <th className="py-2 pr-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {duesLoading ? (
-                <tr>
-                  <td className="py-3 text-gray-500" colSpan={4}>
-                    Loading dues...
-                  </td>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-evegah-border">
+                  <th className="py-2 pr-3 font-medium">Rider</th>
+                  <th className="py-2 pr-3 font-medium">Phone</th>
+                  <th className="py-2 pr-3 font-medium">Due Date</th>
+                  <th className="py-2 pr-3 font-medium">Status</th>
                 </tr>
-              ) : paymentOverdueRows.length === 0 ? (
-                <tr>
-                  <td className="py-3 text-gray-500" colSpan={4}>
-                    No payment dues.
-                  </td>
-                </tr>
-              ) : (
-                duePageRows.map((d) => (
+              </thead>
+              <tbody>
+                {duesLoading ? (
+                  <tr>
+                    <td className="py-3 text-gray-500" colSpan={4}>
+                      Loading dues...
+                    </td>
+                  </tr>
+                ) : paymentOverdueRows.length === 0 ? (
+                  <tr>
+                    <td className="py-3 text-gray-500" colSpan={4}>
+                      No payment dues.
+                    </td>
+                  </tr>
+                ) : (
+                  duePageRows.map((d) => (
                     <tr
                       key={d.id}
-                      className={`border-b border-evegah-border last:border-b-0 hover:bg-gray-50 ${
-                        d?.status === "overdue" ? "cursor-pointer" : ""
-                      }`}
+                      className={`border-b border-evegah-border last:border-b-0 hover:bg-gray-50 ${d?.status === "overdue" ? "cursor-pointer" : ""
+                        }`}
                       onClick={() => {
                         if (d?.status !== "overdue") return;
                         setDetailsRow(d);
@@ -706,174 +704,174 @@ export default function Dashboard() {
                       <td className="py-3 pr-3">{d.status}</td>
                     </tr>
                   ))
-              )}
-            </tbody>
-          </table>
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-            <p>
-              Showing {dueStart}-{dueEnd} of {dueTotal} entries
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="btn-muted px-3 py-1 text-xs"
-                disabled={duePage === 1}
-                onClick={() => setDuePage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </button>
-              <span>
-                Page {duePage} / {duePageCount}
-              </span>
-              <button
-                type="button"
-                className="btn-muted px-3 py-1 text-xs"
-                disabled={duePage >= duePageCount}
-                onClick={() => setDuePage((prev) => Math.min(duePageCount, prev + 1))}
-              >
-                Next
-              </button>
+                )}
+              </tbody>
+            </table>
+            <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+              <p>
+                Showing {dueStart}-{dueEnd} of {dueTotal} entries
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="btn-muted px-3 py-1 text-xs"
+                  disabled={duePage === 1}
+                  onClick={() => setDuePage((prev) => Math.max(1, prev - 1))}
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {duePage} / {duePageCount}
+                </span>
+                <button
+                  type="button"
+                  className="btn-muted px-3 py-1 text-xs"
+                  disabled={duePage >= duePageCount}
+                  onClick={() => setDuePage((prev) => Math.min(duePageCount, prev + 1))}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {detailsOpen && detailsRow ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => {
-              setDetailsOpen(false);
-              setDetailsRow(null);
-            }}
-            aria-label="Close"
-          />
+        {detailsOpen && detailsRow ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => {
+                setDetailsOpen(false);
+                setDetailsRow(null);
+              }}
+              aria-label="Close"
+            />
 
-          <div className="relative card w-full max-w-md p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-base font-semibold text-evegah-text">Rider Details</h3>
-                <p className="text-sm text-gray-500">Overdue ride summary</p>
-              </div>
-              <button
-                type="button"
-                className="btn-muted"
-                onClick={() => {
-                  setDetailsOpen(false);
-                  setDetailsRow(null);
-                }}
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-xs text-gray-500">Rider Name</p>
-                <p className="text-sm font-medium text-evegah-text">{detailsRow.rider_name || "-"}</p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="relative card w-full max-w-md p-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs text-gray-500">Start Date &amp; Time</p>
-                  <p className="text-sm text-evegah-text">{formatDateTime(detailsRow.start_time)}</p>
+                  <h3 className="text-base font-semibold text-evegah-text">Rider Details</h3>
+                  <p className="text-sm text-gray-500">Overdue ride summary</p>
                 </div>
+                <button
+                  type="button"
+                  className="btn-muted"
+                  onClick={() => {
+                    setDetailsOpen(false);
+                    setDetailsRow(null);
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-4">
                 <div>
-                  <p className="text-xs text-gray-500">Return Date &amp; Time</p>
-                  <p className="text-sm text-evegah-text">{formatDateTime(detailsRow.due_date)}</p>
+                  <p className="text-xs text-gray-500">Rider Name</p>
+                  <p className="text-sm font-medium text-evegah-text">{detailsRow.rider_name || "-"}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-gray-500">Start Date &amp; Time</p>
+                    <p className="text-sm text-evegah-text">{formatDateTime(detailsRow.start_time)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Return Date &amp; Time</p>
+                    <p className="text-sm text-evegah-text">{formatDateTime(detailsRow.due_date)}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500">Overdue Since</p>
+                  <p className="text-sm text-evegah-text">
+                    {formatOverdueSince(detailsRow.due_date)}
+                    {detailsRow.due_date ? ` (since ${formatDateTime(detailsRow.due_date)})` : ""}
+                  </p>
                 </div>
               </div>
+            </div>
+          </div>
+        ) : null}
 
-              <div>
-                <p className="text-xs text-gray-500">Overdue Since</p>
-                <p className="text-sm text-evegah-text">
-                  {formatOverdueSince(detailsRow.due_date)}
-                  {detailsRow.due_date ? ` (since ${formatDateTime(detailsRow.due_date)})` : ""}
-                </p>
+        {/* RECENT BATTERY SWAPS TABLE */}
+        <div className="card">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-evegah-bg border border-evegah-border">
+                  <Repeat className="h-5 w-5 text-evegah-text" />
+                </span>
+                <h2 className="font-medium">Recent Battery Swaps</h2>
               </div>
+              <p className="text-sm text-gray-500">
+                Latest swaps recorded by you.
+              </p>
             </div>
-          </div>
-        </div>
-      ) : null}
 
-      {/* RECENT BATTERY SWAPS TABLE */}
-      <div className="card">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-evegah-bg border border-evegah-border">
-                <Repeat className="h-5 w-5 text-evegah-text" />
-              </span>
-              <h2 className="font-medium">Recent Battery Swaps</h2>
-            </div>
-            <p className="text-sm text-gray-500">
-              Latest swaps recorded by you.
-            </p>
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => navigate("/employee/battery-swap")}
+            >
+              View All →
+            </button>
           </div>
 
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={() => navigate("/employee/battery-swap")}
-          >
-            View All →
-          </button>
-        </div>
-
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 border-b border-evegah-border">
-                <th className="py-2 pr-3 font-medium">Rider</th>
-                <th className="py-2 pr-3 font-medium">Mobile</th>
-                <th className="py-2 pr-3 font-medium">Vehicle</th>
-                <th className="py-2 pr-3 font-medium">Battery OUT</th>
-                <th className="py-2 pr-3 font-medium">Battery IN</th>
-                <th className="py-2 pr-3 font-medium">Swapped At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {swapsLoading ? (
-                <tr>
-                  <td className="py-3 text-gray-500" colSpan={6}>
-                    Loading swaps...
-                  </td>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-evegah-border">
+                  <th className="py-2 pr-3 font-medium">Rider</th>
+                  <th className="py-2 pr-3 font-medium">Mobile</th>
+                  <th className="py-2 pr-3 font-medium">Vehicle</th>
+                  <th className="py-2 pr-3 font-medium">Battery OUT</th>
+                  <th className="py-2 pr-3 font-medium">Battery IN</th>
+                  <th className="py-2 pr-3 font-medium">Swapped At</th>
                 </tr>
-              ) : swaps.length === 0 ? (
-                <tr>
-                  <td className="py-3 text-gray-500" colSpan={6}>
-                    No swaps yet.
-                  </td>
-                </tr>
-              ) : (
-                swapPageRows.map((s) => (
-                  <tr
-                    key={s.id}
-                    className="border-b border-evegah-border last:border-b-0 hover:bg-gray-50"
-                  >
-                    <td className="py-3 pr-3">{s.rider_full_name || "-"}</td>
-                    <td className="py-3 pr-3">{s.rider_mobile || "-"}</td>
-                    <td className="py-3 pr-3">{s.vehicle_number}</td>
-                    <td className="py-3 pr-3">{s.battery_out}</td>
-                    <td className="py-3 pr-3">{s.battery_in}</td>
-                    <td className="py-3 pr-3 text-gray-500">
-                      {s.swapped_at
-                        ? formatDateTimeDDMMYYYY(s.swapped_at, "-")
-                        : "-"}
+              </thead>
+              <tbody>
+                {swapsLoading ? (
+                  <tr>
+                    <td className="py-3 text-gray-500" colSpan={6}>
+                      Loading swaps...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-            <p>
-              Showing {swapStart}-{swapEnd} of {swapTotal} entries
-            </p>
+                ) : swaps.length === 0 ? (
+                  <tr>
+                    <td className="py-3 text-gray-500" colSpan={6}>
+                      No swaps yet.
+                    </td>
+                  </tr>
+                ) : (
+                  swapPageRows.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="border-b border-evegah-border last:border-b-0 hover:bg-gray-50"
+                    >
+                      <td className="py-3 pr-3">{s.rider_full_name || "-"}</td>
+                      <td className="py-3 pr-3">{s.rider_mobile || "-"}</td>
+                      <td className="py-3 pr-3">{s.vehicle_number}</td>
+                      <td className="py-3 pr-3">{s.battery_out}</td>
+                      <td className="py-3 pr-3">{s.battery_in}</td>
+                      <td className="py-3 pr-3 text-gray-500">
+                        {s.swapped_at
+                          ? formatDateTimeDDMMYYYY(s.swapped_at, "-")
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+            <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+              <p>
+                Showing {swapStart}-{swapEnd} of {swapTotal} entries
+              </p>
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* DRAFTS */}

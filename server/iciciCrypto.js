@@ -1,7 +1,8 @@
-  import fs from "fs";
+import fs from "fs";
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
+import forge from "node-forge";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,13 +180,41 @@ export function decryptIciciAsymmetricPayload(base64CipherText) {
     );
   }
 
-  const decrypted = crypto.privateDecrypt(
-    {
-      key: privateKey,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    base64Decode(base64CipherText)
-  );
+  // Use node-forge for PKCS1 v1.5 padding (required by ICICI API, removed from Node.js 17+)
+  // ICICI API uses RSA/ECB/PKCS1Padding which is PKCS1 v1.5, not OAEP
+  let decrypted;
+  try {
+    // Convert Node.js private key to forge format
+    // Try PKCS1 first, then PKCS8 if that fails
+    let privateKeyPem;
+    try {
+      privateKeyPem = privateKey.export({ format: "pem", type: "pkcs1" });
+    } catch {
+      privateKeyPem = privateKey.export({ format: "pem", type: "pkcs8" });
+    }
+    const forgePrivateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+
+    // Decrypt using forge with PKCS1 v1.5 padding
+    const encryptedBuffer = base64Decode(base64CipherText);
+    decrypted = Buffer.from(
+      forgePrivateKey.decrypt(encryptedBuffer.toString("binary"), "RSAES-PKCS1-V1_5"),
+      "binary"
+    );
+  } catch (forgeError) {
+    // Fallback: Try Node.js native (may work in some cases)
+    try {
+      decrypted = crypto.privateDecrypt(
+        {
+          key: privateKey,
+        },
+        base64Decode(base64CipherText)
+      );
+    } catch (fallbackError) {
+      throw new Error(
+        `Decryption failed: ${String(forgeError?.message || fallbackError?.message || "Unknown")}`
+      );
+    }
+  }
 
   const asText = decrypted.toString("utf8").trim();
 
@@ -232,13 +261,40 @@ export function decryptIciciResponse({ encryptedKey, encryptedData, iv }) {
     );
   }
 
-  const sessionKey = crypto.privateDecrypt(
-    {
-      key: privateKey,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    base64Decode(encryptedKey)
-  );
+  // Use node-forge for PKCS1 v1.5 padding (required by ICICI API)
+  let sessionKey;
+  try {
+    // Convert Node.js private key to forge format
+    // Try PKCS1 first, then PKCS8 if that fails
+    let privateKeyPem;
+    try {
+      privateKeyPem = privateKey.export({ format: "pem", type: "pkcs1" });
+    } catch {
+      privateKeyPem = privateKey.export({ format: "pem", type: "pkcs8" });
+    }
+    const forgePrivateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+
+    // Decrypt session key using forge with PKCS1 v1.5 padding
+    const encryptedBuffer = base64Decode(encryptedKey);
+    sessionKey = Buffer.from(
+      forgePrivateKey.decrypt(encryptedBuffer.toString("binary"), "RSAES-PKCS1-V1_5"),
+      "binary"
+    );
+  } catch (forgeError) {
+    // Fallback: Try Node.js native
+    try {
+      sessionKey = crypto.privateDecrypt(
+        {
+          key: privateKey,
+        },
+        base64Decode(encryptedKey)
+      );
+    } catch (fallbackError) {
+      throw new Error(
+        `Session key decryption failed: ${String(forgeError?.message || fallbackError?.message || "Unknown")}`
+      );
+    }
+  }
 
   const ivBytes = iv ? base64Decode(iv) : null;
   const encryptedBytes = base64Decode(encryptedData);

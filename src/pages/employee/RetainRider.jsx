@@ -37,41 +37,41 @@ const parseMaybeJson = (value) => {
 };
 
 function RetainRiderInner() {
-      // State for completion message
-      const [retainSuccess, setRetainSuccess] = useState(false);
+  // State for completion message
+  const [retainSuccess, setRetainSuccess] = useState(false);
 
-      // Handle split payment field changes
-      const handleCashChange = (val) => {
-        const cash = Number(val) || 0;
-        const total = Number(formData.totalAmount || 0);
-        updateForm({ cashAmount: cash, onlineAmount: Math.max(0, total - cash) });
-      };
-      const handleOnlineChange = (val) => {
-        const online = Number(val) || 0;
-        const total = Number(formData.totalAmount || 0);
-        updateForm({ onlineAmount: online, cashAmount: Math.max(0, total - online) });
-      };
-    // Payment mode change handler for split/cash/online
-    const handlePaymentModeChange = (mode) => {
-      if (mode === "cash") {
-        updateForm({ paymentMode: mode, cashAmount: formData.totalAmount || 0, onlineAmount: 0 });
-      } else if (mode === "online") {
-        updateForm({ paymentMode: mode, cashAmount: 0, onlineAmount: formData.totalAmount || 0 });
-      } else if (mode === "split") {
-        const total = Number(formData.totalAmount || 0);
-        const nextCash = Math.round(total / 2);
-        updateForm({ paymentMode: mode, cashAmount: nextCash, onlineAmount: total - nextCash });
-      } else {
-        updateForm({ paymentMode: mode });
-      }
-    };
+  // Handle split payment field changes
+  const handleCashChange = (val) => {
+    const cash = Number(val) || 0;
+    const total = Number(formData.totalAmount || 0);
+    updateForm({ cashAmount: cash, onlineAmount: Math.max(0, total - cash) });
+  };
+  const handleOnlineChange = (val) => {
+    const online = Number(val) || 0;
+    const total = Number(formData.totalAmount || 0);
+    updateForm({ onlineAmount: online, cashAmount: Math.max(0, total - online) });
+  };
+  // Payment mode change handler for split/cash/online
+  const handlePaymentModeChange = (mode) => {
+    if (mode === "cash") {
+      updateForm({ paymentMode: mode, cashAmount: formData.totalAmount || 0, onlineAmount: 0 });
+    } else if (mode === "online") {
+      updateForm({ paymentMode: mode, cashAmount: 0, onlineAmount: formData.totalAmount || 0 });
+    } else if (mode === "split") {
+      const total = Number(formData.totalAmount || 0);
+      const nextCash = Math.round(total / 2);
+      updateForm({ paymentMode: mode, cashAmount: nextCash, onlineAmount: total - nextCash });
+    } else {
+      updateForm({ paymentMode: mode });
+    }
+  };
   const { formData, updateForm, resetForm } = useRiderForm();
-    // Set default rentalStart to now when a rider is selected and value is empty
-    useEffect(() => {
-      if (formData.isRetainRider && formData.existingRiderId && !formData.rentalStart) {
-        updateForm({ rentalStart: toDateTimeLocal(new Date()) });
-      }
-    }, [formData.isRetainRider, formData.existingRiderId]);
+  // Set default rentalStart to now when a rider is selected and value is empty
+  useEffect(() => {
+    if (formData.isRetainRider && formData.existingRiderId && !formData.rentalStart) {
+      updateForm({ rentalStart: toDateTimeLocal(new Date()) });
+    }
+  }, [formData.isRetainRider, formData.existingRiderId]);
   const { user } = useAuth();
 
   const preRidePhotosInputRef = useRef(null);
@@ -620,8 +620,8 @@ function RetainRiderInner() {
 
         <div className="card space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            
-            
+
+
             <div>
               <label className="label">Rider Name</label>
               <input
@@ -631,8 +631,8 @@ function RetainRiderInner() {
                 onChange={(e) => setSearchName(e.target.value)}
               />
             </div>
-            
-            
+
+
             <div>
               <label className="label">Registered Mobile Number</label>
               <input
@@ -645,7 +645,7 @@ function RetainRiderInner() {
               />
             </div>
 
-            
+
 
             <div className="flex items-end">
               <button
@@ -793,8 +793,8 @@ function RetainRiderInner() {
                       {p === "online"
                         ? "Online"
                         : p === "split"
-                        ? "Split (cash + online)"
-                        : "Cash"}
+                          ? "Split (cash + online)"
+                          : "Cash"}
                     </option>
                   ))}
                 </select>
@@ -929,11 +929,10 @@ function RetainRiderInner() {
                                   type="button"
                                   disabled={unavailable}
                                   aria-disabled={unavailable}
-                                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                                    unavailable
+                                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${unavailable
                                       ? "cursor-not-allowed text-gray-400"
                                       : "hover:bg-gray-50"
-                                  } ${id === formData.bikeId ? "bg-gray-100" : ""}`}
+                                    } ${id === formData.bikeId ? "bg-gray-100" : ""}`}
                                   onClick={() => {
                                     if (unavailable) return;
                                     selectVehicleId(id);
@@ -1013,11 +1012,10 @@ function RetainRiderInner() {
                                   type="button"
                                   disabled={unavailable}
                                   aria-disabled={unavailable}
-                                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                                    unavailable
+                                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${unavailable
                                       ? "cursor-not-allowed text-gray-400"
                                       : "hover:bg-gray-50"
-                                  } ${id === formData.batteryId ? "bg-gray-100" : ""}`}
+                                    } ${id === formData.batteryId ? "bg-gray-100" : ""}`}
                                   onClick={() => {
                                     if (unavailable) return;
                                     selectBatteryId(id);
@@ -1166,12 +1164,6 @@ function RetainRiderInner() {
                     UPI QR is not configured. Set `VITE_EVEGAH_UPI_ID` in your `.env`.
                   </p>
                 )}
-                {/* Temp Payment QR */}
-                <div className="mt-4">
-                  <h4 className="font-medium text-evegah-text">Temporary Payment QR</h4>
-                  <QRCodeCanvas value="upi://pay?pa=TEMP@upi&pn=Temp%20Payee&am=1&cu=INR" size={120} />
-                  <div className="text-xs text-gray-500 mt-1">For demo/testing only</div>
-                </div>
                 <div className="text-sm text-evegah-text space-y-1 mt-4">
                   <div>
                     <span className="text-gray-500">Total Amount:</span> {amount}

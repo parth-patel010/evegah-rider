@@ -998,10 +998,10 @@ function extractDigiLockerRiderData({ userinfo, aadhaarResponse, fallbackLast4 }
 
   const mobile = normalizeIndianMobile(
     userinfo?.mobile ||
-      userinfo?.mobile_number ||
-      userinfo?.phone_number ||
-      userinfo?.phone ||
-      ""
+    userinfo?.mobile_number ||
+    userinfo?.phone_number ||
+    userinfo?.phone ||
+    ""
   );
 
   return {
@@ -1083,10 +1083,10 @@ const DIGILOCKER = {
 
 const DIGILOCKER_ENABLED = Boolean(
   DIGILOCKER.clientId &&
-    DIGILOCKER.clientSecret &&
-    DIGILOCKER.authorizeUrl &&
-    DIGILOCKER.tokenUrl &&
-    DIGILOCKER.redirectUri
+  DIGILOCKER.clientSecret &&
+  DIGILOCKER.authorizeUrl &&
+  DIGILOCKER.tokenUrl &&
+  DIGILOCKER.redirectUri
 );
 
 // state -> { uid, createdAtMs, aadhaarLast4, codeVerifier? }
@@ -1206,8 +1206,8 @@ async function fetchJson(url, { method = "GET", headers = {}, body } = {}) {
   if (!res.ok) {
     const message =
       (data && typeof data === "object" && data.error) ? String(data.error) :
-      (typeof data === "string" && data) ? data :
-      `Request failed (${res.status})`;
+        (typeof data === "string" && data) ? data :
+          `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -1320,9 +1320,9 @@ app.post("/api/digilocker/auth-url", requireUser, (req, res) => {
     ...(DIGILOCKER.amr ? { amr: DIGILOCKER.amr } : {}),
     ...(pkce
       ? {
-          code_challenge: pkce.codeChallenge,
-          code_challenge_method: pkce.codeChallengeMethod,
-        }
+        code_challenge: pkce.codeChallenge,
+        code_challenge_method: pkce.codeChallengeMethod,
+      }
       : {}),
   });
 
@@ -1503,16 +1503,16 @@ app.get("/api/digilocker/callback", async (req, res) => {
     const inferredDoc = inferDigiLockerDocument(aadhaar);
     const documentId = inferredDoc && inferredDoc.buffer && inferredDoc.buffer.length
       ? (() => {
-          const id = createDigiLockerDocId();
-          digilockerDocumentStore.set(id, {
-            uid: stateEntry?.uid || "",
-            createdAtMs: Date.now(),
-            mime: inferredDoc.mime,
-            filename: inferredDoc.filename,
-            buffer: inferredDoc.buffer,
-          });
-          return id;
-        })()
+        const id = createDigiLockerDocId();
+        digilockerDocumentStore.set(id, {
+          uid: stateEntry?.uid || "",
+          createdAtMs: Date.now(),
+          mime: inferredDoc.mime,
+          filename: inferredDoc.filename,
+          buffer: inferredDoc.buffer,
+        });
+        return id;
+      })()
       : "";
 
     const extracted = extractDigiLockerRiderData({
@@ -1788,236 +1788,236 @@ app.post("/api/whatsapp/send-receipt", async (req, res) => {
     // Otherwise we try a session document message.
     const payload = templateName
       ? {
-          ...basePayload,
-          type: "template",
-          template: {
-            name: templateName,
-            language: { code: templateLanguage || "en_US" },
-            components: (() => {
-              const components = [];
+        ...basePayload,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: templateLanguage || "en_US" },
+          components: (() => {
+            const components = [];
 
-              // Optional template header (must match exactly what Meta template expects)
-              // Supported: "document" (uses the receipt URL) or "text".
-              if (templateHeaderType === "document") {
-                components.push({
-                  type: "header",
-                  parameters: [
-                    {
-                      type: "document",
-                      document: {
-                        link: mediaUrl,
-                        filename: fileName,
-                      },
+            // Optional template header (must match exactly what Meta template expects)
+            // Supported: "document" (uses the receipt URL) or "text".
+            if (templateHeaderType === "document") {
+              components.push({
+                type: "header",
+                parameters: [
+                  {
+                    type: "document",
+                    document: {
+                      link: mediaUrl,
+                      filename: fileName,
                     },
-                  ],
-                });
-              } else if (templateHeaderType === "text") {
-                components.push({
-                  type: "header",
-                  parameters: [
-                    {
-                      type: "text",
-                      text: String(process.env.WHATSAPP_TEMPLATE_HEADER_TEXT || ""),
-                    },
-                  ],
-                });
-              }
+                  },
+                ],
+              });
+            } else if (templateHeaderType === "text") {
+              components.push({
+                type: "header",
+                parameters: [
+                  {
+                    type: "text",
+                    text: String(process.env.WHATSAPP_TEMPLATE_HEADER_TEXT || ""),
+                  },
+                ],
+              });
+            }
 
-              // Optional body parameters (map keys to values)
-              const bodyKeys = templateBodyParams
-                ? templateBodyParams.split(",").map((s) => s.trim()).filter(Boolean)
-                : [];
+            // Optional body parameters (map keys to values)
+            const bodyKeys = templateBodyParams
+              ? templateBodyParams.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
 
-              // Meta Cloud API template components are position-based: parameters are matched by order.
-              // Some UI surfaces show "variable names" (e.g. {{name}}), but the API still expects
-              // ordered parameters. Only enable `parameter_name` if you explicitly know your template
-              // requires it.
-              const templateParamModeRaw = String(process.env.WHATSAPP_TEMPLATE_PARAM_MODE || "positional")
+            // Meta Cloud API template components are position-based: parameters are matched by order.
+            // Some UI surfaces show "variable names" (e.g. {{name}}), but the API still expects
+            // ordered parameters. Only enable `parameter_name` if you explicitly know your template
+            // requires it.
+            const templateParamModeRaw = String(process.env.WHATSAPP_TEMPLATE_PARAM_MODE || "positional")
+              .trim()
+              .toLowerCase();
+            const useNamedParams = templateParamModeRaw === "named";
+
+            // Try to derive amount if present
+            const amount =
+              formData?.amountPaid ??
+              formData?.paidAmount ??
+              formData?.paymentDetails?.totalAmount ??
+              formData?.totalAmount ??
+              formData?.amount ??
+              "";
+
+            const paymentMode =
+              formData?.paymentMode ??
+              formData?.payment_method ??
+              formData?.paymentMethod ??
+              "";
+
+            const invoiceDateSource = (() => {
+              const v = formData?.rentalStart ?? formData?.rental_start ?? formData?.start_time;
+              if (!v) return new Date();
+              const d = new Date(v);
+              return Number.isNaN(d.getTime()) ? new Date() : d;
+            })();
+
+            const invoiceDate = (() => {
+              const format = String(process.env.WHATSAPP_TEMPLATE_INVOICE_DATE_FORMAT || "DD/MM/YYYY")
                 .trim()
-                .toLowerCase();
-              const useNamedParams = templateParamModeRaw === "named";
+                .toUpperCase();
+              const d = invoiceDateSource;
+              const dd = String(d.getDate()).padStart(2, "0");
+              const mm = String(d.getMonth() + 1).padStart(2, "0");
+              const yyyy = String(d.getFullYear());
+              if (format === "YYYY-MM-DD") return `${yyyy}-${mm}-${dd}`;
+              if (format === "DD-MM-YYYY") return `${dd}-${mm}-${yyyy}`;
+              if (format === "DDMMYYYY") return `${dd}${mm}${yyyy}`;
+              if (format === "DD/MM/YYYY") return `${dd}/${mm}/${yyyy}`;
+              // Default: DD/MM/YYYY
+              return `${dd}/${mm}/${yyyy}`;
+            })();
 
-              // Try to derive amount if present
-              const amount =
-                formData?.amountPaid ??
-                formData?.paidAmount ??
-                formData?.paymentDetails?.totalAmount ??
-                formData?.totalAmount ??
-                formData?.amount ??
-                "";
+            const plan =
+              formData?.rentalPackage ??
+              formData?.rental_package ??
+              formData?.planName ??
+              formData?.plan ??
+              formData?.subscriptionPlan ??
+              "";
 
-              const paymentMode =
-                formData?.paymentMode ??
-                formData?.payment_method ??
-                formData?.paymentMethod ??
-                "";
+            const hub = formData?.operationalZone ?? formData?.zone ?? "";
+            const vehicleType =
+              formData?.bikeModel ??
+              formData?.vehicleType ??
+              formData?.vehicle_type ??
+              "";
 
-              const invoiceDateSource = (() => {
-                const v = formData?.rentalStart ?? formData?.rental_start ?? formData?.start_time;
-                if (!v) return new Date();
-                const d = new Date(v);
-                return Number.isNaN(d.getTime()) ? new Date() : d;
-              })();
+            if (bodyKeys.length) {
+              // If the template is using positional variables ({{1}}, {{2}}, ...), map
+              // the first 5 values in the expected order.
+              const isNumericKeys = bodyKeys.every((k) => /^\d+$/.test(k));
 
-              const invoiceDate = (() => {
-                const format = String(process.env.WHATSAPP_TEMPLATE_INVOICE_DATE_FORMAT || "DD/MM/YYYY")
-                  .trim()
-                  .toUpperCase();
-                const d = invoiceDateSource;
-                const dd = String(d.getDate()).padStart(2, "0");
-                const mm = String(d.getMonth() + 1).padStart(2, "0");
-                const yyyy = String(d.getFullYear());
-                if (format === "YYYY-MM-DD") return `${yyyy}-${mm}-${dd}`;
-                if (format === "DD-MM-YYYY") return `${dd}-${mm}-${yyyy}`;
-                if (format === "DDMMYYYY") return `${dd}${mm}${yyyy}`;
-                if (format === "DD/MM/YYYY") return `${dd}/${mm}/${yyyy}`;
-                // Default: DD/MM/YYYY
-                return `${dd}/${mm}/${yyyy}`;
-              })();
+              const values = {
+                name: riderName,
+                riderName,
+                receiptId,
+                receiptNumber,
+                registrationId: receiptId,
+                mediaUrl,
+                mediaPath,
+                mediaPathNoSlash: String(mediaPath || "").replace(/^\/+/, ""),
+                messageBody,
+                amount: String(amount ?? ""),
+                paymentMode: String(paymentMode ?? ""),
+                hub: String(hub ?? ""),
+                vehicleType: String(vehicleType ?? ""),
+                phone: `91${toDigitsValue}`,
+                invoiceNo: receiptId,
+                invoice_no: receiptId,
+                invoiceDate,
+                invoice_date: invoiceDate,
+                plan: String(plan ?? ""),
+                fileName,
+              };
 
-              const plan =
-                formData?.rentalPackage ??
-                formData?.rental_package ??
-                formData?.planName ??
-                formData?.plan ??
-                formData?.subscriptionPlan ??
-                "";
+              const positionalValues = [
+                riderName,
+                receiptNumber,
+                invoiceDate,
+                String(plan ?? ""),
+                String(amount ?? ""),
+              ];
 
-              const hub = formData?.operationalZone ?? formData?.zone ?? "";
-              const vehicleType =
-                formData?.bikeModel ??
-                formData?.vehicleType ??
-                formData?.vehicle_type ??
-                "";
+              components.push({
+                type: "body",
+                parameters: bodyKeys.map((key, idx) => {
+                  const text = isNumericKeys && !useNamedParams
+                    ? String(positionalValues[idx] ?? "")
+                    : String(values[key] ?? "");
+                  return {
+                    type: "text",
+                    text,
+                    ...(useNamedParams ? { parameter_name: key } : {}),
+                  };
+                }),
+              });
+            }
 
-              if (bodyKeys.length) {
-                // If the template is using positional variables ({{1}}, {{2}}, ...), map
-                // the first 5 values in the expected order.
-                const isNumericKeys = bodyKeys.every((k) => /^\d+$/.test(k));
+            // Optional URL button parameter (for templates with a dynamic URL button)
+            // Example: WHATSAPP_TEMPLATE_URL_BUTTON_INDEX=0 and the template URL is like https://.../{{1}}
+            if (templateUrlButtonIndexRaw) {
+              const index = Number.parseInt(templateUrlButtonIndexRaw, 10);
+              if (Number.isFinite(index) && index >= 0) {
+                const buttonValue = (() => {
+                  const values = {
+                    name: riderName,
+                    riderName,
+                    receiptId,
+                    receiptNumber,
+                    registrationId: receiptId,
+                    mediaUrl,
+                    mediaPath,
+                    mediaPathNoSlash: String(mediaPath || "").replace(/^\/+/, ""),
+                    messageBody,
+                    amount: String(amount ?? ""),
+                    paymentMode: String(paymentMode ?? ""),
+                    hub: String(hub ?? ""),
+                    vehicleType: String(vehicleType ?? ""),
+                    phone: `91${toDigitsValue}`,
+                    invoiceNo: receiptId,
+                    invoice_no: receiptId,
+                    invoiceDate,
+                    invoice_date: invoiceDate,
+                    plan: String(plan ?? ""),
+                    fileName,
+                  };
+                  return getTemplateValue(values, templateUrlButtonValueKey);
+                })();
 
-                const values = {
-                  name: riderName,
-                  riderName,
-                  receiptId,
-                  receiptNumber,
-                  registrationId: receiptId,
-                  mediaUrl,
-                  mediaPath,
-                  mediaPathNoSlash: String(mediaPath || "").replace(/^\/+/, ""),
-                  messageBody,
-                  amount: String(amount ?? ""),
-                  paymentMode: String(paymentMode ?? ""),
-                  hub: String(hub ?? ""),
-                  vehicleType: String(vehicleType ?? ""),
-                  phone: `91${toDigitsValue}`,
-                  invoiceNo: receiptId,
-                  invoice_no: receiptId,
-                  invoiceDate,
-                  invoice_date: invoiceDate,
-                  plan: String(plan ?? ""),
-                  fileName,
-                };
-
-                const positionalValues = [
-                  riderName,
-                  receiptNumber,
-                  invoiceDate,
-                  String(plan ?? ""),
-                  String(amount ?? ""),
-                ];
-
-                components.push({
-                  type: "body",
-                  parameters: bodyKeys.map((key, idx) => {
-                    const text = isNumericKeys && !useNamedParams
-                      ? String(positionalValues[idx] ?? "")
-                      : String(values[key] ?? "");
-                    return {
-                      type: "text",
-                      text,
-                      ...(useNamedParams ? { parameter_name: key } : {}),
-                    };
-                  }),
-                });
-              }
-
-              // Optional URL button parameter (for templates with a dynamic URL button)
-              // Example: WHATSAPP_TEMPLATE_URL_BUTTON_INDEX=0 and the template URL is like https://.../{{1}}
-              if (templateUrlButtonIndexRaw) {
-                const index = Number.parseInt(templateUrlButtonIndexRaw, 10);
-                if (Number.isFinite(index) && index >= 0) {
-                  const buttonValue = (() => {
-                    const values = {
-                      name: riderName,
-                      riderName,
-                      receiptId,
-                      receiptNumber,
-                      registrationId: receiptId,
-                      mediaUrl,
-                      mediaPath,
-                      mediaPathNoSlash: String(mediaPath || "").replace(/^\/+/, ""),
-                      messageBody,
-                      amount: String(amount ?? ""),
-                      paymentMode: String(paymentMode ?? ""),
-                      hub: String(hub ?? ""),
-                      vehicleType: String(vehicleType ?? ""),
-                      phone: `91${toDigitsValue}`,
-                      invoiceNo: receiptId,
-                      invoice_no: receiptId,
-                      invoiceDate,
-                      invoice_date: invoiceDate,
-                      plan: String(plan ?? ""),
-                      fileName,
-                    };
-                    return getTemplateValue(values, templateUrlButtonValueKey);
-                  })();
-
-                  // If the template has a dynamic URL button, Meta requires a parameter.
-                  // Fail fast with a clear message rather than sending an invalid request.
-                  if (!buttonValue) {
-                    components.push({
-                      type: "button",
-                      sub_type: "url",
-                      index: String(index),
-                      parameters: [
-                        {
-                          type: "text",
-                          text: String(receiptNumber || receiptId || mediaPathNoSlash || mediaUrl || "").trim(),
-                          ...(useNamedParams ? { parameter_name: "1" } : {}),
-                        },
-                      ],
-                    });
-                  } else {
-                    components.push({
-                      type: "button",
-                      sub_type: "url",
-                      index: String(index),
-                      // Dynamic URL buttons use a single placeholder (often {{1}}).
-                      parameters: [
-                        {
-                          type: "text",
-                          text: buttonValue,
-                          ...(useNamedParams ? { parameter_name: "1" } : {}),
-                        },
-                      ],
-                    });
-                  }
+                // If the template has a dynamic URL button, Meta requires a parameter.
+                // Fail fast with a clear message rather than sending an invalid request.
+                if (!buttonValue) {
+                  components.push({
+                    type: "button",
+                    sub_type: "url",
+                    index: String(index),
+                    parameters: [
+                      {
+                        type: "text",
+                        text: String(receiptNumber || receiptId || mediaPathNoSlash || mediaUrl || "").trim(),
+                        ...(useNamedParams ? { parameter_name: "1" } : {}),
+                      },
+                    ],
+                  });
+                } else {
+                  components.push({
+                    type: "button",
+                    sub_type: "url",
+                    index: String(index),
+                    // Dynamic URL buttons use a single placeholder (often {{1}}).
+                    parameters: [
+                      {
+                        type: "text",
+                        text: buttonValue,
+                        ...(useNamedParams ? { parameter_name: "1" } : {}),
+                      },
+                    ],
+                  });
                 }
               }
+            }
 
-              return components.length ? components : undefined;
-            })(),
-          },
-        }
+            return components.length ? components : undefined;
+          })(),
+        },
+      }
       : {
-          ...basePayload,
-          type: "document",
-          document: {
-            link: mediaUrl,
-            filename: fileName,
-            caption: messageBody,
-          },
-        };
+        ...basePayload,
+        type: "document",
+        document: {
+          link: mediaUrl,
+          filename: fileName,
+          caption: messageBody,
+        },
+      };
 
     // If we ended up with template.components === undefined, remove it entirely (Meta is picky).
     if (payload?.type === "template" && payload?.template && payload.template.components === undefined) {
@@ -2057,16 +2057,16 @@ app.post("/api/whatsapp/send-receipt", async (req, res) => {
             : 0,
           bodyParamNames: Array.isArray(payload?.template?.components)
             ? (payload.template.components.find((c) => c?.type === "body")?.parameters || [])
-                .map((p) => p?.parameter_name)
-                .filter(Boolean)
+              .map((p) => p?.parameter_name)
+              .filter(Boolean)
             : [],
           buttonUrlParamText: Array.isArray(payload?.template?.components)
             ? (payload.template.components.find((c) => c?.type === "button" && c?.sub_type === "url")
-                ?.parameters?.[0]?.text || "")
+              ?.parameters?.[0]?.text || "")
             : "",
           buttonUrlIndex: Array.isArray(payload?.template?.components)
             ? (payload.template.components.find((c) => c?.type === "button" && c?.sub_type === "url")
-                ?.index || null)
+              ?.index || null)
             : null,
         },
       });
@@ -2096,16 +2096,16 @@ app.post("/api/whatsapp/send-receipt", async (req, res) => {
               : 0,
             bodyParamNames: Array.isArray(payload?.template?.components)
               ? (payload.template.components.find((c) => c?.type === "body")?.parameters || [])
-                  .map((p) => p?.parameter_name)
-                  .filter(Boolean)
+                .map((p) => p?.parameter_name)
+                .filter(Boolean)
               : [],
             buttonUrlParamText: Array.isArray(payload?.template?.components)
               ? (payload.template.components.find((c) => c?.type === "button" && c?.sub_type === "url")
-                  ?.parameters?.[0]?.text || "")
+                ?.parameters?.[0]?.text || "")
               : "",
             buttonUrlIndex: Array.isArray(payload?.template?.components)
               ? (payload.template.components.find((c) => c?.type === "button" && c?.sub_type === "url")
-                  ?.index || null)
+                ?.index || null)
               : null,
           },
         },
@@ -2529,6 +2529,8 @@ app.post("/api/rentals", async (req, res) => {
 });
 
 // Update an active rental (used for retain rider when the rider hasn't returned yet)
+// Includes payment verification for ICICI payment gateway integration
+// Blocks rental update if payment is not verified as SUCCESS
 app.patch("/api/rentals/:id", async (req, res) => {
   const rentalId = String(req.params.id || "").trim();
   if (!rentalId) return res.status(400).json({ error: "id required" });
@@ -2553,6 +2555,60 @@ app.patch("/api/rentals/:id", async (req, res) => {
     if (rentalRow.has_return) {
       await client.query("rollback");
       return res.status(409).json({ error: "Rental already ended (returned)." });
+    }
+
+    // Payment verification for retain rider flow
+    // Check if payment is required and verified before allowing rental update
+    const paymentMode = String(body.payment_mode || body.paymentMode || rentalRow.payment_mode || "").trim().toLowerCase();
+    const rentalMeta = rentalRow.meta && typeof rentalRow.meta === "object" ? rentalRow.meta : {};
+    const newRentalMeta = body.meta && typeof body.meta === "object" ? body.meta : {};
+    const merchantTranId = newRentalMeta.iciciMerchantTranId || newRentalMeta.merchantTranId || rentalMeta.iciciMerchantTranId || rentalMeta.merchantTranId || null;
+    const iciciEnabled = String(process.env.VITE_ICICI_ENABLED || "false").toLowerCase() === "true";
+    const totalAmount = Number(body.total_amount ?? body.totalAmount ?? rentalRow.total_amount ?? 0);
+
+    if (iciciEnabled && paymentMode !== "cash" && merchantTranId && totalAmount > 0) {
+      try {
+        const { rows } = await pool.query(
+          `select status, amount, transaction_type
+           from public.payment_transactions
+           where merchant_tran_id = $1
+           limit 1`,
+          [merchantTranId]
+        );
+
+        if (!rows || rows.length === 0) {
+          await client.query("rollback");
+          return res.status(402).json({
+            error: "Payment transaction not found. Please complete payment before updating rental.",
+            paymentRequired: true,
+          });
+        }
+
+        const paymentTxn = rows[0];
+        if (paymentTxn.status !== "SUCCESS") {
+          await client.query("rollback");
+          return res.status(402).json({
+            error: `Payment not completed. Current status: ${paymentTxn.status}. Please complete payment before updating rental.`,
+            paymentRequired: true,
+            paymentStatus: paymentTxn.status,
+          });
+        }
+
+        // Verify payment amount matches rental amount
+        if (paymentTxn.amount !== totalAmount) {
+          await client.query("rollback");
+          return res.status(402).json({
+            error: `Payment amount mismatch. Expected ₹${totalAmount}, but payment is ₹${paymentTxn.amount}.`,
+            paymentRequired: true,
+          });
+        }
+      } catch (error) {
+        await client.query("rollback");
+        console.error("Payment verification error during rental update", String(error?.message || error));
+        return res.status(500).json({
+          error: "Payment verification failed. Please try again or contact support.",
+        });
+      }
     }
 
     const set = [];
@@ -2600,6 +2656,28 @@ app.patch("/api/rentals/:id", async (req, res) => {
     return res.status(500).json({ error: String(error?.message || error) });
   } finally {
     client.release();
+  }
+});
+
+// ICICI Payment Gateway Integration - Diagnostic endpoint
+app.get("/api/payments/icici/status", async (req, res) => {
+  try {
+    const cryptoStatus = getIciciCryptoStatus();
+    res.json({
+      configured: Boolean(iciciBaseUrl && iciciQrEndpoint && iciciApiKey && iciciMid),
+      crypto: {
+        hasPublicKey: cryptoStatus.hasPublicKey,
+        hasPrivateKey: cryptoStatus.hasPrivateKey,
+      },
+      publicKeyPath: process.env.ICICI_PUBLIC_KEY_PATH || null,
+      privateKeyPath: process.env.ICICI_CLIENT_PRIVATE_KEY_P12_PATH || null,
+      baseUrl: iciciBaseUrl || null,
+      endpoint: iciciQrEndpoint || null,
+      mid: iciciMid || null,
+      hasApiKey: Boolean(iciciApiKey),
+    });
+  } catch (error) {
+    res.status(500).json({ error: String(error?.message || error) });
   }
 });
 
@@ -2731,12 +2809,47 @@ app.post("/api/payments/icici/qr", async (req, res) => {
       mc: mcc,
     });
 
+    // Store payment transaction record for tracking and verification
+    // This allows us to verify payment status before allowing rider actions
+    let paymentTransactionId = null;
+    if (databaseUrl && respMerchantTranId) {
+      try {
+        const transactionType = String(req.body?.transactionType || "NEW_RIDER").toUpperCase();
+        const rentalId = req.body?.rentalId || null;
+        const batterySwapId = req.body?.batterySwapId || null;
+        const riderId = req.body?.riderId || null;
+
+        const { rows: insertedRows } = await pool.query(
+          `insert into public.payment_transactions (
+             merchant_tran_id, ref_id, amount, status, transaction_type,
+             rental_id, battery_swap_id, rider_id, icici_response
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           returning id`,
+          [
+            respMerchantTranId,
+            refId || null,
+            Number(amount),
+            "PENDING",
+            transactionType,
+            rentalId,
+            batterySwapId,
+            riderId,
+            JSON.stringify(decoded || {}),
+          ]
+        );
+        paymentTransactionId = insertedRows?.[0]?.id || null;
+      } catch (error) {
+        console.warn("Failed to create payment transaction record", String(error?.message || error));
+      }
+    }
+
     return res.json({
       merchantId: String(iciciMid),
       terminalId: mcc,
       merchantTranId: respMerchantTranId,
       refId,
       qrString: `upi://pay?${params.toString()}`,
+      paymentTransactionId,
       upstream: decoded,
     });
   } catch (error) {
@@ -2745,6 +2858,9 @@ app.post("/api/payments/icici/qr", async (req, res) => {
   }
 });
 
+// ICICI Transaction Status API Endpoint
+// Verifies payment status by querying ICICI Transaction Status API
+// Updates payment_transactions table with latest status from ICICI
 app.post("/api/payments/icici/status", async (req, res) => {
   try {
     const { merchantTranId, subMerchantId, terminalId } = req.body || {};
@@ -2834,9 +2950,124 @@ app.post("/api/payments/icici/status", async (req, res) => {
       });
     }
 
+    // Update payment_transactions table with status from ICICI API
+    // ICICI response format: response, merchantId, subMerchantId, terminalId, success, message,
+    // merchantTranId, OriginalBankRRN, amount, status (PENDING/SUCCESS/FAILURE)
+    if (databaseUrl && decoded) {
+      try {
+        const iciciStatus = String(decoded.status || decoded.Status || "PENDING").toUpperCase();
+        const bankRRN = decoded.OriginalBankRRN || decoded.originalBankRRN || decoded.bankRRN || null;
+        const transactionAmount = decoded.amount || decoded.Amount || null;
+
+        // Map ICICI status to our payment_transactions status
+        let paymentStatus = "PENDING";
+        if (iciciStatus === "SUCCESS") {
+          paymentStatus = "SUCCESS";
+        } else if (iciciStatus === "FAILURE" || iciciStatus === "FAILED") {
+          paymentStatus = "FAILURE";
+        }
+
+        await pool.query(
+          `update public.payment_transactions
+           set status = $1,
+               bank_rrn = coalesce(nullif($2, ''), bank_rrn),
+               icici_response = $3,
+               last_status_check_at = now(),
+               verification_attempts = verification_attempts + 1,
+               verified_at = case when $1 = 'SUCCESS' and verified_at is null then now() else verified_at end,
+               updated_at = now()
+           where merchant_tran_id = $4`,
+          [
+            paymentStatus,
+            bankRRN,
+            JSON.stringify(decoded),
+            merchantTranId,
+          ]
+        );
+      } catch (error) {
+        console.warn("Failed to update payment transaction status", String(error?.message || error));
+      }
+    }
+
     return res.json(decoded);
   } catch (error) {
     console.error("ICICI status check error", error);
+    return res.status(500).json({ error: String(error?.message || error) });
+  }
+});
+
+// Payment Verification Endpoint
+// Verifies if payment transaction exists and has SUCCESS status
+// Used by frontend to check payment status before allowing rider actions
+app.post("/api/payments/icici/verify", async (req, res) => {
+  try {
+    const { merchantTranId, rentalId, transactionType } = req.body || {};
+
+    if (!merchantTranId && !rentalId) {
+      return res.status(400).json({ error: "merchantTranId or rentalId is required" });
+    }
+
+    if (!databaseUrl) {
+      return res.status(500).json({ error: "Database not configured" });
+    }
+
+    let query;
+    let params;
+
+    if (merchantTranId) {
+      query = `select id, merchant_tran_id, ref_id, bank_rrn, amount, status, transaction_type,
+                      rental_id, battery_swap_id, rider_id, verified_at, created_at
+               from public.payment_transactions
+               where merchant_tran_id = $1
+               limit 1`;
+      params = [merchantTranId];
+    } else {
+      query = `select id, merchant_tran_id, ref_id, bank_rrn, amount, status, transaction_type,
+                      rental_id, battery_swap_id, rider_id, verified_at, created_at
+               from public.payment_transactions
+               where rental_id = $1`;
+      params = [rentalId];
+      if (transactionType) {
+        query += ` and transaction_type = $2`;
+        params.push(transactionType);
+      }
+      query += ` order by created_at desc limit 1`;
+    }
+
+    const { rows } = await pool.query(query, params);
+
+    if (!rows || rows.length === 0) {
+      return res.json({
+        verified: false,
+        exists: false,
+        message: "Payment transaction not found",
+      });
+    }
+
+    const transaction = rows[0];
+    const isVerified = transaction.status === "SUCCESS";
+
+    return res.json({
+      verified: isVerified,
+      exists: true,
+      transaction: {
+        id: transaction.id,
+        merchantTranId: transaction.merchant_tran_id,
+        refId: transaction.ref_id,
+        bankRRN: transaction.bank_rrn,
+        amount: transaction.amount,
+        status: transaction.status,
+        transactionType: transaction.transaction_type,
+        rentalId: transaction.rental_id,
+        batterySwapId: transaction.battery_swap_id,
+        riderId: transaction.rider_id,
+        verifiedAt: transaction.verified_at,
+        createdAt: transaction.created_at,
+      },
+      message: isVerified ? "Payment verified successfully" : `Payment status: ${transaction.status}`,
+    });
+  } catch (error) {
+    console.error("Payment verification error", error);
     return res.status(500).json({ error: String(error?.message || error) });
   }
 });
@@ -2957,10 +3188,31 @@ app.post("/api/payments/icici/refund", async (req, res) => {
   }
 });
 
+// ICICI Payment Gateway Callback Handler
+// Handles encrypted callback responses from ICICI Bank UPI API
+// Updates payment_transactions table and payment_notifications for reconciliation
+// Performs signature verification if configured for security
 app.post("/api/payments/icici/callback", async (req, res) => {
-  const payload = req.body || {};
+  let payload = req.body || {};
   const signatureSecret = String(process.env.ICICI_PAYMENT_SIGNATURE_SECRET || "").trim();
-  const rawBody = req.rawBody || (payload ? JSON.stringify(payload) : "");
+  let rawBody = req.rawBody || (payload ? JSON.stringify(payload) : "");
+
+  // Handle encrypted callback payload - ICICI sends encrypted Base64 encoded response
+  // Decrypt using client private key if payload appears encrypted
+  const contentType = String(req.headers["content-type"] || "").toLowerCase();
+  if (contentType.includes("text/plain") && typeof rawBody === "string" && rawBody.trim()) {
+    try {
+      const decrypted = decodeIciciAsymmetricResponseOrThrow(rawBody);
+      if (decrypted && typeof decrypted === "object") {
+        payload = decrypted;
+        rawBody = JSON.stringify(decrypted);
+      }
+    } catch (error) {
+      console.warn("ICICI callback decryption attempt failed, treating as plain JSON", String(error?.message || error));
+    }
+  }
+
+  // Signature verification for callback security
   const signatureHeader =
     req.headers["x-icici-signature"] ||
     req.headers["x-signature"] ||
@@ -2982,6 +3234,9 @@ app.post("/api/payments/icici/callback", async (req, res) => {
     }
   }
 
+  // Extract callback data using ICICI API documentation field names
+  // ICICI callback format: merchantId, subMerchantId, terminalId, BankRRN, merchantTranId,
+  // PayerName, PayerMobile, PayerVA, PayerAmount, TxnStatus, TxnInitDate, TxnCompletionDate
   const findFirst = (...values) => {
     for (const value of values) {
       if (value === undefined || value === null) continue;
@@ -2991,48 +3246,53 @@ app.post("/api/payments/icici/callback", async (req, res) => {
     return "";
   };
 
-  const reference = findFirst(
+  // Extract merchant transaction ID (primary identifier)
+  const merchantTranId = findFirst(
+    payload.merchantTranId,
+    payload.merchantTranID,
+    payload.merchant_tran_id,
     payload.merchantRefNo,
     payload.merchant_reference_no,
     payload.merchantReference,
     payload.referenceId,
-    payload.reference,
-    payload.orderId,
-    payload.order_reference,
-    payload.paymentReference,
-    payload.merchant_reference
+    payload.reference
   );
 
-  const transactionId = findFirst(
+  // Extract Bank RRN (Reference Number from ICICI)
+  const bankRRN = findFirst(
+    payload.BankRRN,
+    payload.bankRRN,
+    payload.bank_rrn,
+    payload.rrn,
     payload.transactionId,
     payload.txnId,
-    payload.transaction_reference,
-    payload.txnRef,
-    payload.rrn,
-    payload.paymentId,
-    payload.payment_id
+    payload.transaction_reference
   );
 
+  // Extract transaction status (ICICI uses TxnStatus field)
   const statusRaw = findFirst(
+    payload.TxnStatus,
+    payload.txnStatus,
     payload.status,
     payload.payment_status,
-    payload.txnStatus,
     payload.transactionStatus,
     payload.responseCode,
-    payload.result,
-    payload.status_code
+    payload.result
   );
   const status = statusRaw ? statusRaw.toUpperCase() : null;
 
+  // Extract status message
   const statusMessage = findFirst(
     payload.statusMessage,
     payload.status_msg,
     payload.responseMessage,
     payload.response_message,
+    payload.message,
     payload.note,
     payload.response_desc
   );
 
+  // Parse amount (ICICI uses PayerAmount field)
   const parseAmount = (value) => {
     if (value === undefined || value === null) return null;
     const cleaned = String(value).replace(/[^0-9.\-]+/g, "");
@@ -3043,81 +3303,100 @@ app.post("/api/payments/icici/callback", async (req, res) => {
   };
 
   const amount = parseAmount(
+    payload.PayerAmount,
+    payload.payerAmount,
     payload.amount,
     payload.payment_amount,
     payload.transaction_amount,
     payload.txnAmount,
     payload.amountPaid,
     payload.value,
-    payload.amt,
-    payload.net_amount,
-    payload.settlement_amount
+    payload.amt
   );
 
-  const paymentMethod = findFirst(
-    payload.payment_method,
-    payload.paymentMethod,
-    payload.channel,
-    payload.payment_channel,
-    payload.instrument,
-    payload.paymentInstrument,
-    payload.mode
+  // Extract payer information
+  const payerName = findFirst(payload.PayerName, payload.payerName, payload.payer_name);
+  const payerMobile = findFirst(payload.PayerMobile, payload.payerMobile, payload.payer_mobile);
+  const payerVA = findFirst(payload.PayerVA, payload.payerVA, payload.payer_va);
+
+  // Transaction dates
+  const txnInitDate = findFirst(payload.TxnInitDate, payload.txnInitDate, payload.txn_init_date);
+  const txnCompletionDate = findFirst(
+    payload.TxnCompletionDate,
+    payload.txnCompletionDate,
+    payload.txn_completion_date
   );
 
-  const isUuid = (value) =>
-    typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-
-  let rentalId = null;
-  let paymentDueId = null;
-
-  if (reference && isUuid(reference)) {
-    try {
-      const { rows: rentalRows } = await pool.query(
-        "select id from public.rentals where id = $1 limit 1",
-        [reference]
-      );
-      if (rentalRows?.[0]) {
-        rentalId = rentalRows[0].id;
-      } else {
-        const { rows: dueRows } = await pool.query(
-          "select id from public.payment_dues where id = $1 limit 1",
-          [reference]
-        );
-        if (dueRows?.[0]) {
-          paymentDueId = dueRows[0].id;
-        }
-      }
-    } catch (error) {
-      console.warn("ICICI callback reference lookup failed", String(error?.message || error));
-    }
-  }
-
+  // Determine payment transaction status
   const successStates = new Set(["SUCCESS", "SUCCESSFUL", "COMPLETED", "PAID", "APPROVED", "OK"]);
   const failureStates = new Set(["FAILED", "FAIL", "DECLINED", "REJECTED", "ERROR"]);
   const pendingStates = new Set(["PENDING", "IN_PROGRESS", "PROCESSING", "RECEIVED"]);
 
-  const dueStatus =
+  const paymentStatus =
     status && successStates.has(status)
-      ? "paid"
+      ? "SUCCESS"
       : status && failureStates.has(status)
-      ? "failed"
-      : status && pendingStates.has(status)
-      ? "in-progress"
-      : null;
+        ? "FAILURE"
+        : status && pendingStates.has(status)
+          ? "PENDING"
+          : "PENDING";
 
-  const noteParts = ["ICICI callback"];
-  if (status) noteParts.push(`status ${status}`);
-  if (transactionId) noteParts.push(`txn ${transactionId}`);
-  if (amount !== null) noteParts.push(`amount ${amount}`);
-  if (statusMessage) noteParts.push(statusMessage);
-  const noteText = noteParts.filter(Boolean).join(" - ");
+  // Lookup payment transaction by merchantTranId
+  let paymentTransactionId = null;
+  let rentalId = null;
+  let batterySwapId = null;
+  let riderId = null;
+  let transactionType = null;
 
+  if (merchantTranId) {
+    try {
+      const { rows: txnRows } = await pool.query(
+        `select id, rental_id, battery_swap_id, rider_id, transaction_type, status
+         from public.payment_transactions
+         where merchant_tran_id = $1
+         limit 1`,
+        [merchantTranId]
+      );
+      if (txnRows?.[0]) {
+        paymentTransactionId = txnRows[0].id;
+        rentalId = txnRows[0].rental_id;
+        batterySwapId = txnRows[0].battery_swap_id;
+        riderId = txnRows[0].rider_id;
+        transactionType = txnRows[0].transaction_type;
+      }
+    } catch (error) {
+      console.warn("Payment transaction lookup failed", String(error?.message || error));
+    }
+  }
+
+  // If transaction not found by merchantTranId, try to find by rental_id from reference
+  if (!paymentTransactionId && merchantTranId) {
+    const isUuid = (value) =>
+      typeof value === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    if (isUuid(merchantTranId)) {
+      try {
+        const { rows: rentalRows } = await pool.query(
+          `select id, rider_id from public.rentals where id = $1 limit 1`,
+          [merchantTranId]
+        );
+        if (rentalRows?.[0]) {
+          rentalId = rentalRows[0].id;
+          riderId = rentalRows[0].rider_id;
+        }
+      } catch (error) {
+        console.warn("Rental lookup failed in callback", String(error?.message || error));
+      }
+    }
+  }
+
+  // Store callback notification for audit trail
   const headerSnapshot = {
     "x-icici-signature": req.headers["x-icici-signature"] || null,
     "x-signature": req.headers["x-signature"] || null,
     signature: req.headers.signature || null,
     "user-agent": req.headers["user-agent"] || null,
+    "content-type": req.headers["content-type"] || null,
   };
 
   let notificationId = null;
@@ -3132,56 +3411,101 @@ app.post("/api/payments/icici/callback", async (req, res) => {
          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12
        ) returning id`,
       [
-        reference || null,
-        transactionId || null,
+        merchantTranId || null,
+        bankRRN || null,
         status,
         statusMessage || null,
         amount,
-        paymentMethod || null,
+        payerVA || null,
         normalizedSignature || null,
         headerSnapshot,
         payload,
         rawBody || null,
         rentalId,
-        paymentDueId,
+        null,
       ]
     );
     notificationId = insertedRows?.[0]?.id || null;
   } catch (error) {
-    console.error("Failed to store ICICI callback", String(error?.message || error));
+    console.error("Failed to store ICICI callback notification", String(error?.message || error));
     return res.status(500).json({ error: "failed to persist callback" });
   }
 
-  if (paymentDueId && dueStatus) {
+  // Update payment_transactions table with callback data
+  if (paymentTransactionId) {
     try {
       await pool.query(
-        `update public.payment_dues
+        `update public.payment_transactions
          set status = $1,
-             notes = case
-               when coalesce(notes,'') = '' then $2
-               else notes || E'\\n' || $2
-             end
-         where id = $3`,
-        [dueStatus, noteText, paymentDueId]
+             bank_rrn = coalesce(nullif($2, ''), bank_rrn),
+             callback_data = $3,
+             verified_at = case when $1 = 'SUCCESS' then now() else verified_at end,
+             updated_at = now()
+         where id = $4`,
+        [
+          paymentStatus,
+          bankRRN || null,
+          JSON.stringify({
+            payerName,
+            payerMobile,
+            payerVA,
+            txnInitDate,
+            txnCompletionDate,
+            statusMessage,
+            callbackReceivedAt: new Date().toISOString(),
+          }),
+          paymentTransactionId,
+        ]
       );
     } catch (error) {
-      console.warn(
-        "Failed to update payment due status for ICICI callback",
-        String(error?.message || error)
+      console.error("Failed to update payment transaction from callback", String(error?.message || error));
+    }
+  } else if (merchantTranId && rentalId) {
+    // Create payment transaction record if it doesn't exist (edge case)
+    try {
+      const { rows: createdRows } = await pool.query(
+        `insert into public.payment_transactions (
+           merchant_tran_id, ref_id, bank_rrn, amount, status, transaction_type,
+           rental_id, rider_id, callback_data, verified_at
+         ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, case when $5 = 'SUCCESS' then now() else null end)
+         returning id`,
+        [
+          merchantTranId,
+          null,
+          bankRRN || null,
+          amount,
+          paymentStatus,
+          transactionType || "NEW_RIDER",
+          rentalId,
+          riderId,
+          JSON.stringify({
+            payerName,
+            payerMobile,
+            payerVA,
+            txnInitDate,
+            txnCompletionDate,
+            statusMessage,
+            callbackReceivedAt: new Date().toISOString(),
+          }),
+        ]
       );
+      paymentTransactionId = createdRows?.[0]?.id || null;
+    } catch (error) {
+      console.warn("Failed to create payment transaction from callback", String(error?.message || error));
     }
   }
 
   return res.json({
     ok: true,
     recorded: Boolean(notificationId),
-    reference,
-    transaction_id: transactionId,
-    status,
+    payment_transaction_updated: Boolean(paymentTransactionId),
+    merchant_tran_id: merchantTranId,
+    bank_rrn: bankRRN,
+    status: paymentStatus,
     status_message: statusMessage,
     amount,
     rental_id: rentalId,
-    payment_due_id: paymentDueId,
+    battery_swap_id: batterySwapId,
   });
 });
 
@@ -3320,6 +3644,8 @@ app.get("/api/rentals/:id/documents", async (req, res) => {
 });
 
 // New Rider registration: creates/updates rider + rental + stores images (data URLs)
+// Includes payment verification for ICICI payment gateway integration
+// Blocks registration if payment is not verified as SUCCESS
 app.post("/api/registrations/new-rider", async (req, res) => {
   const body = req.body || {};
 
@@ -3342,6 +3668,130 @@ app.post("/api/registrations/new-rider", async (req, res) => {
   if (!fullName) return res.status(400).json({ error: "full_name required" });
   if (mobile.length !== 10) return res.status(400).json({ error: "valid mobile required" });
   if (!rental.start_time) return res.status(400).json({ error: "start_time required" });
+
+  // Payment verification for ICICI payment gateway
+  // Check if payment transaction exists and has SUCCESS status
+  // Only allow registration if payment is verified or payment mode is cash
+  const paymentMode = String(rental.payment_mode || rental.paymentMode || "").trim().toLowerCase();
+  const merchantTranId = rentalMeta.iciciMerchantTranId || rentalMeta.merchantTranId || null;
+  const iciciEnabled = String(process.env.VITE_ICICI_ENABLED || "false").toLowerCase() === "true";
+
+  if (iciciEnabled && paymentMode !== "cash" && merchantTranId) {
+    try {
+      // Check payment transaction status in database
+      const { rows } = await pool.query(
+        `select status, amount, transaction_type
+         from public.payment_transactions
+         where merchant_tran_id = $1
+         limit 1`,
+        [merchantTranId]
+      );
+
+      let paymentStatus = null;
+      let paymentAmount = null;
+
+      if (rows && rows.length > 0) {
+        paymentStatus = rows[0].status;
+        paymentAmount = rows[0].amount;
+      } else {
+        // Payment transaction not found in database - verify via ICICI API
+        if (!iciciBaseUrl || !iciciTransactionStatusEndpoint || !iciciApiKey || !fetchApi) {
+          return res.status(402).json({
+            error: "Payment verification service unavailable. Please complete payment before registration.",
+            paymentRequired: true,
+          });
+        }
+
+        const mcc = String(process.env.ICICI_TERMINAL_ID || "5411").trim();
+        const subMid = String(process.env.ICICI_SUB_MERCHANT_ID || iciciMid).trim();
+        const statusPayload = {
+          merchantId: String(iciciMid),
+          subMerchantId: subMid,
+          terminalId: mcc,
+          merchantTranId: String(merchantTranId),
+        };
+
+        const mode = String(process.env.ICICI_ENCRYPTION_MODE || "asymmetric").toLowerCase();
+        const headers = {
+          "Content-Type": "text/plain;charset=UTF-8",
+          Accept: "*/*",
+          apikey: iciciApiKey,
+        };
+
+        let outboundBody;
+        if (mode === "hybrid") {
+          const serviceName = String(process.env.ICICI_SERVICE_STATUS || "TransactionStatus3").trim();
+          outboundBody = JSON.stringify(
+            buildIciciEncryptedRequest({ requestId: crypto.randomUUID(), service: serviceName, payload: statusPayload })
+          );
+          headers["Content-Type"] = "application/json";
+          headers.Accept = "application/json";
+        } else {
+          outboundBody = encryptIciciAsymmetricPayload(statusPayload);
+        }
+
+        const statusResponse = await fetchApi(`${iciciBaseUrl}${iciciTransactionStatusEndpoint}`, {
+          method: "POST",
+          headers,
+          body: outboundBody,
+        });
+
+        const rawText = await statusResponse.text().catch(() => "");
+        let decoded = null;
+        if (mode === "hybrid") {
+          try {
+            decoded = rawText ? JSON.parse(rawText) : null;
+          } catch {
+            decoded = rawText;
+          }
+        } else {
+          try {
+            decoded = decodeIciciAsymmetricResponseOrThrow(rawText);
+          } catch (verifyError) {
+            console.warn("ICICI status API decryption failed", String(verifyError?.message || verifyError));
+            return res.status(402).json({
+              error: "Payment verification failed. Please complete payment before registration.",
+              paymentRequired: true,
+            });
+          }
+        }
+
+        if (!statusResponse.ok || !decoded) {
+          return res.status(402).json({
+            error: "Payment verification failed. Please complete payment before registration.",
+            paymentRequired: true,
+          });
+        }
+
+        const iciciStatus = String(decoded.status || decoded.Status || "PENDING").toUpperCase();
+        paymentStatus = iciciStatus === "SUCCESS" ? "SUCCESS" : iciciStatus === "FAILURE" ? "FAILURE" : "PENDING";
+        paymentAmount = decoded.amount || decoded.Amount || null;
+      }
+
+      // Verify payment status is SUCCESS
+      if (paymentStatus !== "SUCCESS") {
+        return res.status(402).json({
+          error: `Payment not completed. Current status: ${paymentStatus}. Please complete payment before registration.`,
+          paymentRequired: true,
+          paymentStatus: paymentStatus,
+        });
+      }
+
+      // Verify payment amount matches rental amount
+      const rentalAmount = Number(rental.total_amount ?? rental.totalAmount ?? 0);
+      if (paymentAmount !== null && paymentAmount !== rentalAmount) {
+        return res.status(402).json({
+          error: `Payment amount mismatch. Expected ₹${rentalAmount}, but payment is ₹${paymentAmount}.`,
+          paymentRequired: true,
+        });
+      }
+    } catch (error) {
+      console.error("Payment verification error during registration", String(error?.message || error));
+      return res.status(500).json({
+        error: "Payment verification failed. Please try again or contact support.",
+      });
+    }
+  }
 
   const preRide = Array.isArray(documents.preRidePhotos) ? documents.preRidePhotos : [];
   if (preRide.length === 0) {
@@ -3712,10 +4162,17 @@ app.get("/api/analytics/active-zone-counts", async (_req, res) => {
 });
 
 // Return vehicle: close rental + create returns row + upload return photos
+// Return Vehicle Endpoint
+// Handles vehicle return submission with payment verification for overdue charges
+// Blocks return submission if overdue charges exist and payment is not verified
 app.post("/api/returns/submit", upload.array("photos", 10), async (req, res) => {
   const rentalId = String(req.body.rentalId || "");
   const conditionNotes = String(req.body.conditionNotes || "").trim();
   const feedback = String(req.body.feedback || "").trim();
+  const overdueCharge = Number(req.body.overdueCharge || req.body.overdue_charge || 0);
+  const extraPayment = Number(req.body.extraPayment || req.body.extra_payment || 0);
+  const totalDueAmount = overdueCharge + extraPayment;
+
   if (!rentalId) return res.status(400).json({ error: "rentalId required" });
   if (!conditionNotes) return res.status(400).json({ error: "conditionNotes required" });
 
@@ -3739,6 +4196,68 @@ app.post("/api/returns/submit", upload.array("photos", 10), async (req, res) => 
     }
     const riderId = rentalRow.rider_id;
     const depositAmount = Number(rentalRow.deposit_amount ?? 0);
+
+    // Payment verification for return rider - check if overdue/extra charges are paid
+    // Only verify payment if there are charges due
+    if (totalDueAmount > 0) {
+      const returnMeta = req.body.meta && typeof req.body.meta === "object" ? req.body.meta : {};
+      const merchantTranId = returnMeta.iciciMerchantTranId || returnMeta.merchantTranId || null;
+      const iciciEnabled = String(process.env.VITE_ICICI_ENABLED || "false").toLowerCase() === "true";
+
+      if (iciciEnabled && merchantTranId) {
+        try {
+          const { rows } = await pool.query(
+            `select status, amount, transaction_type
+             from public.payment_transactions
+             where merchant_tran_id = $1
+               and transaction_type = 'RETURN_RIDER'
+             limit 1`,
+            [merchantTranId]
+          );
+
+          if (!rows || rows.length === 0) {
+            await client.query("rollback");
+            return res.status(402).json({
+              error: "Payment transaction not found for overdue charges. Please complete payment before returning vehicle.",
+              paymentRequired: true,
+            });
+          }
+
+          const paymentTxn = rows[0];
+          if (paymentTxn.status !== "SUCCESS") {
+            await client.query("rollback");
+            return res.status(402).json({
+              error: `Payment not completed for overdue charges. Current status: ${paymentTxn.status}. Please complete payment before returning vehicle.`,
+              paymentRequired: true,
+              paymentStatus: paymentTxn.status,
+            });
+          }
+
+          // Verify payment amount matches total due amount
+          if (paymentTxn.amount !== totalDueAmount) {
+            await client.query("rollback");
+            return res.status(402).json({
+              error: `Payment amount mismatch. Expected ₹${totalDueAmount}, but payment is ₹${paymentTxn.amount}.`,
+              paymentRequired: true,
+            });
+          }
+        } catch (error) {
+          await client.query("rollback");
+          console.error("Payment verification error during return submission", String(error?.message || error));
+          return res.status(500).json({
+            error: "Payment verification failed. Please try again or contact support.",
+          });
+        }
+      } else if (iciciEnabled && !merchantTranId) {
+        // Payment required but merchant transaction ID not provided
+        await client.query("rollback");
+        return res.status(402).json({
+          error: `Payment required for overdue charges (₹${totalDueAmount}). Please complete payment before returning vehicle.`,
+          paymentRequired: true,
+          amountDue: totalDueAmount,
+        });
+      }
+    }
 
     await client.query(`update public.rentals set end_time = $1 where id = $2`, [nowIso, rentalId]);
     const ret = await client.query(
@@ -4346,6 +4865,9 @@ app.get("/api/battery-swaps", async (req, res) => {
   }
 });
 
+// Battery Swap Endpoint
+// Handles battery swap submission with payment verification
+// Blocks battery swap if payment is required and not verified
 app.post("/api/battery-swaps", async (req, res) => {
   const body = req.body || {};
 
@@ -4354,8 +4876,60 @@ app.post("/api/battery-swaps", async (req, res) => {
   if (!body.battery_out) return res.status(400).json({ error: "battery_out required" });
   if (!body.battery_in) return res.status(400).json({ error: "battery_in required" });
 
+  // Payment verification for battery swap
+  // Check if payment is required and verified before allowing battery swap
+  const swapAmount = Number(body.swap_amount || body.swapAmount || 0);
+  const swapMeta = body.meta && typeof body.meta === "object" ? body.meta : {};
+  const merchantTranId = swapMeta.iciciMerchantTranId || swapMeta.merchantTranId || null;
+  const iciciEnabled = String(process.env.VITE_ICICI_ENABLED || "false").toLowerCase() === "true";
+
+  if (iciciEnabled && swapAmount > 0 && merchantTranId) {
+    try {
+      const { rows } = await pool.query(
+        `select status, amount, transaction_type, battery_swap_id
+         from public.payment_transactions
+         where merchant_tran_id = $1
+           and transaction_type = 'BATTERY_SWAP'
+         limit 1`,
+        [merchantTranId]
+      );
+
+      if (!rows || rows.length === 0) {
+        return res.status(402).json({
+          error: "Payment transaction not found for battery swap. Please complete payment before swapping battery.",
+          paymentRequired: true,
+        });
+      }
+
+      const paymentTxn = rows[0];
+      if (paymentTxn.status !== "SUCCESS") {
+        return res.status(402).json({
+          error: `Payment not completed for battery swap. Current status: ${paymentTxn.status}. Please complete payment before swapping battery.`,
+          paymentRequired: true,
+          paymentStatus: paymentTxn.status,
+        });
+      }
+
+      // Verify payment amount matches swap amount
+      if (paymentTxn.amount !== swapAmount) {
+        return res.status(402).json({
+          error: `Payment amount mismatch. Expected ₹${swapAmount}, but payment is ₹${paymentTxn.amount}.`,
+          paymentRequired: true,
+        });
+      }
+    } catch (error) {
+      console.error("Payment verification error during battery swap", String(error?.message || error));
+      return res.status(500).json({
+        error: "Payment verification failed. Please try again or contact support.",
+      });
+    }
+  }
+
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
+    await client.query("begin");
+
+    const { rows } = await client.query(
       `insert into public.battery_swaps
        (employee_uid, employee_email, vehicle_number, battery_out, battery_in, swapped_at, notes)
        values ($1,$2,$3,$4,$5,coalesce($6::timestamptz, now()),$7)
@@ -4371,9 +4945,31 @@ app.post("/api/battery-swaps", async (req, res) => {
       ]
     );
 
+    const batterySwapId = rows[0]?.id || null;
+
+    // Link payment transaction to battery swap if payment was made
+    if (batterySwapId && merchantTranId && iciciEnabled && swapAmount > 0) {
+      try {
+        await client.query(
+          `update public.payment_transactions
+           set battery_swap_id = $1,
+               updated_at = now()
+           where merchant_tran_id = $2
+             and transaction_type = 'BATTERY_SWAP'`,
+          [batterySwapId, merchantTranId]
+        );
+      } catch (error) {
+        console.warn("Failed to link payment transaction to battery swap", String(error?.message || error));
+      }
+    }
+
+    await client.query("commit");
     res.status(201).json(rows[0]);
   } catch (error) {
+    await client.query("rollback");
     res.status(500).json({ error: String(error?.message || error) });
+  } finally {
+    client.release();
   }
 });
 
