@@ -24,7 +24,7 @@ export default function EditRiderModal({ rider, close, reload }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-6">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-6 z-50">
       <div className="bg-white p-6 rounded-xl w-[400px] shadow-lg">
         <h2 className="text-lg font-semibold mb-4">Edit Rider</h2>
 

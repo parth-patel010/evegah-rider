@@ -11,6 +11,12 @@ import crypto from "crypto";
 import admin from "firebase-admin";
 import multer from "multer";
 import PDFDocument from "pdfkit";
+import {
+  buildIciciEncryptedRequest,
+  decryptIciciAsymmetricPayload,
+  encryptIciciAsymmetricPayload,
+  getIciciCryptoStatus,
+} from "./iciciCrypto.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +54,56 @@ const whatsappAccessToken = String(process.env.WHATSAPP_CLOUD_ACCESS_TOKEN || ""
 const whatsappWebhookVerifyToken = String(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "").trim();
 const whatsappAppSecret = String(process.env.WHATSAPP_APP_SECRET || "").trim();
 const fetchApi = typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null;
+
+const iciciMid = String(process.env.ICICI_MID || "").trim();
+const iciciVpa = String(process.env.ICICI_VPA || "").trim();
+const iciciApiKey = String(process.env.ICICI_API_KEY || "").trim();
+const iciciBaseUrl = String(process.env.ICICI_BASE_URL || "").trim();
+const iciciQrEndpoint = String(process.env.ICICI_QR_ENDPOINT || "").trim();
+const iciciTransactionStatusEndpoint = String(process.env.ICICI_TRANSACTION_STATUS_ENDPOINT || "").trim();
+const iciciCallbackStatusEndpoint = String(process.env.ICICI_CALLBACK_STATUS_ENDPOINT || "").trim();
+const iciciRefundEndpoint = String(process.env.ICICI_REFUND_ENDPOINT || "").trim();
+
+function tryParseJson(text) {
+  const s = String(text || "").trim();
+  if (!s) return null;
+  if (!(s.startsWith("{") || s.startsWith("["))) return null;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeBase64(text) {
+  const s = String(text || "").trim();
+  if (!s || s.length < 24) return false;
+  if (s.length % 4 !== 0) return false;
+  return /^[A-Za-z0-9+/=\s]+$/.test(s);
+}
+
+function decodeIciciAsymmetricResponseOrThrow(rawText) {
+  // ICICI docs say response is encrypted Base64(RSA(...)), but some environments return JSON.
+  const asJson = tryParseJson(rawText);
+  if (asJson !== null) return asJson;
+
+  const trimmed = String(rawText || "").trim();
+  if (!trimmed) return "";
+
+  // Only attempt decrypt if it looks like encrypted base64.
+  if (!looksLikeBase64(trimmed)) return trimmed;
+
+  const cryptoStatus = getIciciCryptoStatus();
+  if (!cryptoStatus.hasPrivateKey) {
+    const err = new Error(
+      "ICICI response looks encrypted. Configure ICICI_CLIENT_PRIVATE_KEY_P12_PATH (and passphrase) to decrypt response."
+    );
+    err.code = "ICICI_PRIVATE_KEY_REQUIRED";
+    throw err;
+  }
+
+  return decryptIciciAsymmetricPayload(trimmed);
+}
 
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "adminev@gmail.com").trim().toLowerCase();
 
@@ -1693,6 +1749,7 @@ app.post("/api/whatsapp/send-receipt", async (req, res) => {
       : `v${graphVersionRaw}`;
     const apiUrl = `https://graph.facebook.com/${graphVersion}/${encodeURIComponent(whatsappPhoneNumberId)}/messages`;
 
+    // Restore template-based sending with document attachment if configured
     const templateName = String(process.env.WHATSAPP_TEMPLATE_NAME || "").trim();
     const templateLanguage = String(process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en_US").trim();
     const templateBodyParams = String(process.env.WHATSAPP_TEMPLATE_BODY_PARAMS || "").trim();
@@ -2543,6 +2600,360 @@ app.patch("/api/rentals/:id", async (req, res) => {
     return res.status(500).json({ error: String(error?.message || error) });
   } finally {
     client.release();
+  }
+});
+
+// ICICI Payment Gateway Integration
+app.post("/api/payments/icici/qr", async (req, res) => {
+  try {
+    const { amount, billNumber, merchantTranId, terminalId, validatePayerAccFlag, payerAccount, payerIFSC } =
+      req.body || {};
+
+    if (!amount) {
+      return res.status(400).json({ error: "amount is required" });
+    }
+
+    if (!iciciBaseUrl || !iciciQrEndpoint || !iciciApiKey || !iciciMid) {
+      return res.status(500).json({ error: "ICICI payment gateway not configured" });
+    }
+
+    const cryptoStatus = getIciciCryptoStatus();
+    if (!cryptoStatus.hasPublicKey) {
+      return res.status(500).json({
+        error:
+          "ICICI encryption not configured. Set ICICI_PUBLIC_KEY_PATH (ICICI .cer) or ICICI_PUBLIC_KEY_PEM on the server.",
+      });
+    }
+
+    if (!fetchApi) {
+      return res.status(500).json({
+        error: "Server fetch() not available. Use Node 18+ or provide a fetch polyfill.",
+      });
+    }
+
+    const mcc = String(terminalId || process.env.ICICI_TERMINAL_ID || "5411").trim();
+    const txnId =
+      String(merchantTranId || "").trim() ||
+      String(billNumber || "").trim() ||
+      crypto.randomUUID().replace(/-/g, "").slice(0, 32);
+
+    const payload = {
+      amount: Number(amount).toFixed(2),
+      merchantId: String(iciciMid),
+      terminalId: mcc,
+      merchantTranId: txnId,
+      billNumber: String(billNumber || txnId).slice(0, 50),
+    };
+
+    if (validatePayerAccFlag) {
+      payload.validatePayerAccFlag = String(validatePayerAccFlag).toUpperCase() === "Y" ? "Y" : "N";
+      if (payload.validatePayerAccFlag === "Y") {
+        if (payerAccount) payload.payerAccount = String(payerAccount);
+        if (payerIFSC) payload.payerIFSC = String(payerIFSC);
+      }
+    }
+
+    const mode = String(process.env.ICICI_ENCRYPTION_MODE || "asymmetric").toLowerCase();
+    const headers = {
+      // As per PDF: content-type is text/plain, API key header name is apikey
+      "Content-Type": "text/plain;charset=UTF-8",
+      Accept: "*/*",
+      apikey: iciciApiKey,
+    };
+
+    let outboundBody;
+    if (mode === "hybrid") {
+      const serviceName = String(process.env.ICICI_SERVICE_QR || "QR3").trim();
+      outboundBody = JSON.stringify(
+        buildIciciEncryptedRequest({ requestId: txnId, service: serviceName, payload })
+      );
+      headers["Content-Type"] = "application/json";
+      headers.Accept = "application/json";
+    } else {
+      outboundBody = encryptIciciAsymmetricPayload(payload);
+    }
+
+    const response = await fetchApi(`${iciciBaseUrl}${iciciQrEndpoint}`, {
+      method: "POST",
+      headers,
+      body: outboundBody,
+    });
+
+    const rawText = await response.text().catch(() => "");
+    let decoded = null;
+    if (mode === "hybrid") {
+      try {
+        decoded = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        decoded = rawText;
+      }
+    } else {
+      try {
+        decoded = decodeIciciAsymmetricResponseOrThrow(rawText);
+      } catch (error) {
+        if (error?.code === "ICICI_PRIVATE_KEY_REQUIRED") {
+          return res.status(500).json({
+            error: String(error.message || error),
+            upstreamStatus: response.status,
+            upstreamBody: rawText,
+          });
+        }
+        throw error;
+      }
+    }
+
+    if (!response.ok) {
+      console.error("ICICI QR API failed", decoded);
+      const msg =
+        decoded && typeof decoded === "object"
+          ? decoded.message || decoded.error || decoded.response || "QR API failed"
+          : decoded || "QR API failed";
+      return res.status(response.status).json({
+        error: msg,
+        upstreamStatus: response.status,
+        upstreamBody: decoded,
+      });
+    }
+
+    const refId =
+      (decoded && (decoded.refId || decoded.refid || decoded.RefId || decoded.refID)) || null;
+    const respMerchantTranId =
+      (decoded && (decoded.merchantTranId || decoded.merchantTranID)) || txnId;
+
+    // PDF: upi://pay?pa=<merchant VPA>&pn=<merchant name>&tr=<Refid>&am=<amount>&cu=INR&mc=<MCC>
+    const payeeName = String(process.env.ICICI_PAYEE_NAME || "Evegah").trim();
+    const params = new URLSearchParams({
+      pa: String(iciciVpa || "").trim(),
+      pn: payeeName,
+      tr: String(refId || "").trim(),
+      am: Number(amount).toFixed(2),
+      cu: "INR",
+      mc: mcc,
+    });
+
+    return res.json({
+      merchantId: String(iciciMid),
+      terminalId: mcc,
+      merchantTranId: respMerchantTranId,
+      refId,
+      qrString: `upi://pay?${params.toString()}`,
+      upstream: decoded,
+    });
+  } catch (error) {
+    console.error("ICICI QR generation error", error);
+    return res.status(500).json({ error: String(error?.message || error) });
+  }
+});
+
+app.post("/api/payments/icici/status", async (req, res) => {
+  try {
+    const { merchantTranId, subMerchantId, terminalId } = req.body || {};
+
+    if (!merchantTranId) {
+      return res.status(400).json({ error: "merchantTranId is required" });
+    }
+
+    if (!iciciBaseUrl || !iciciTransactionStatusEndpoint || !iciciApiKey) {
+      return res.status(500).json({ error: "ICICI payment gateway not configured" });
+    }
+
+    if (!fetchApi) {
+      return res.status(500).json({
+        error: "Server fetch() not available. Use Node 18+ or provide a fetch polyfill.",
+      });
+    }
+
+    const mcc = String(terminalId || process.env.ICICI_TERMINAL_ID || "5411").trim();
+    const subMid = String(subMerchantId || process.env.ICICI_SUB_MERCHANT_ID || iciciMid).trim();
+
+    const payload = {
+      merchantId: String(iciciMid),
+      subMerchantId: subMid,
+      terminalId: mcc,
+      merchantTranId: String(merchantTranId),
+    };
+
+    const mode = String(process.env.ICICI_ENCRYPTION_MODE || "asymmetric").toLowerCase();
+    const headers = {
+      "Content-Type": "text/plain;charset=UTF-8",
+      Accept: "*/*",
+      apikey: iciciApiKey,
+    };
+
+    let outboundBody;
+    if (mode === "hybrid") {
+      const serviceName = String(process.env.ICICI_SERVICE_STATUS || "TransactionStatus3").trim();
+      outboundBody = JSON.stringify(
+        buildIciciEncryptedRequest({ requestId: crypto.randomUUID(), service: serviceName, payload })
+      );
+      headers["Content-Type"] = "application/json";
+      headers.Accept = "application/json";
+    } else {
+      outboundBody = encryptIciciAsymmetricPayload(payload);
+    }
+
+    const response = await fetchApi(`${iciciBaseUrl}${iciciTransactionStatusEndpoint}`, {
+      method: "POST",
+      headers,
+      body: outboundBody,
+    });
+
+    const rawText = await response.text().catch(() => "");
+    let decoded = null;
+    if (mode === "hybrid") {
+      try {
+        decoded = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        decoded = rawText;
+      }
+    } else {
+      try {
+        decoded = decodeIciciAsymmetricResponseOrThrow(rawText);
+      } catch (error) {
+        if (error?.code === "ICICI_PRIVATE_KEY_REQUIRED") {
+          return res.status(500).json({
+            error: String(error.message || error),
+            upstreamStatus: response.status,
+            upstreamBody: rawText,
+          });
+        }
+        throw error;
+      }
+    }
+
+    if (!response.ok) {
+      console.error("ICICI status check failed", decoded);
+      const msg =
+        decoded && typeof decoded === "object"
+          ? decoded.message || decoded.error || decoded.response || "Status check failed"
+          : decoded || "Status check failed";
+      return res.status(response.status).json({
+        error: msg,
+        upstreamStatus: response.status,
+        upstreamBody: decoded,
+      });
+    }
+
+    return res.json(decoded);
+  } catch (error) {
+    console.error("ICICI status check error", error);
+    return res.status(500).json({ error: String(error?.message || error) });
+  }
+});
+
+app.post("/api/payments/icici/refund", async (req, res) => {
+  try {
+    const {
+      originalBankRRN,
+      merchantTranId,
+      originalmerchantTranId,
+      refundAmount,
+      note,
+      onlineRefund,
+      payeeVA,
+      subMerchantId,
+      terminalId,
+    } = req.body || {};
+
+    if (!originalBankRRN || !merchantTranId || !originalmerchantTranId || !refundAmount || !note) {
+      return res.status(400).json({
+        error:
+          "originalBankRRN, merchantTranId, originalmerchantTranId, refundAmount and note are required",
+      });
+    }
+
+    if (!iciciBaseUrl || !iciciRefundEndpoint || !iciciApiKey) {
+      return res.status(500).json({ error: "ICICI payment gateway not configured" });
+    }
+
+    if (!fetchApi) {
+      return res.status(500).json({
+        error: "Server fetch() not available. Use Node 18+ or provide a fetch polyfill.",
+      });
+    }
+
+    const mcc = String(terminalId || process.env.ICICI_TERMINAL_ID || "5411").trim();
+    const subMid = String(subMerchantId || process.env.ICICI_SUB_MERCHANT_ID || iciciMid).trim();
+
+    const payload = {
+      merchantId: String(iciciMid),
+      subMerchantId: subMid,
+      terminalId: mcc,
+      originalBankRRN: String(originalBankRRN),
+      merchantTranId: String(merchantTranId),
+      originalmerchantTranId: String(originalmerchantTranId),
+      refundAmount: Number(refundAmount).toFixed(2),
+      note: String(note).slice(0, 50),
+      onlineRefund: String(onlineRefund || "Y").toUpperCase() === "N" ? "N" : "Y",
+    };
+
+    if (payeeVA) payload.payeeVA = String(payeeVA);
+
+    const mode = String(process.env.ICICI_ENCRYPTION_MODE || "asymmetric").toLowerCase();
+    const headers = {
+      "Content-Type": "text/plain;charset=UTF-8",
+      Accept: "*/*",
+      apikey: iciciApiKey,
+    };
+
+    let outboundBody;
+    if (mode === "hybrid") {
+      const serviceName = String(process.env.ICICI_SERVICE_REFUND || "Refund").trim();
+      outboundBody = JSON.stringify(
+        buildIciciEncryptedRequest({ requestId: crypto.randomUUID(), service: serviceName, payload })
+      );
+      headers["Content-Type"] = "application/json";
+      headers.Accept = "application/json";
+    } else {
+      outboundBody = encryptIciciAsymmetricPayload(payload);
+    }
+
+    const response = await fetchApi(`${iciciBaseUrl}${iciciRefundEndpoint}`, {
+      method: "POST",
+      headers,
+      body: outboundBody,
+    });
+
+    const rawText = await response.text().catch(() => "");
+    let decoded = null;
+    if (mode === "hybrid") {
+      try {
+        decoded = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        decoded = rawText;
+      }
+    } else {
+      try {
+        decoded = decodeIciciAsymmetricResponseOrThrow(rawText);
+      } catch (error) {
+        if (error?.code === "ICICI_PRIVATE_KEY_REQUIRED") {
+          return res.status(500).json({
+            error: String(error.message || error),
+            upstreamStatus: response.status,
+            upstreamBody: rawText,
+          });
+        }
+        throw error;
+      }
+    }
+
+    if (!response.ok) {
+      console.error("ICICI refund failed", decoded);
+      const msg =
+        decoded && typeof decoded === "object"
+          ? decoded.message || decoded.error || decoded.response || "Refund failed"
+          : decoded || "Refund failed";
+      return res.status(response.status).json({
+        error: msg,
+        upstreamStatus: response.status,
+        upstreamBody: decoded,
+      });
+    }
+
+    return res.json(decoded);
+  } catch (error) {
+    console.error("ICICI refund error", error);
+    return res.status(500).json({ error: String(error?.message || error) });
   }
 });
 
@@ -3533,20 +3944,36 @@ app.get("/api/dashboard/active-rentals", async (req, res) => {
   }
 });
 
-app.get("/api/dashboard/revenue-months", async (req, res) => {
+
+// New: Multi-metric dashboard analytics (revenue, rentals, deposit, cash/upi split)
+app.get("/api/dashboard/analytics-months", async (req, res) => {
   const months = Math.min(12, Math.max(1, Number(req.query.months || 6)));
   try {
     const { rows } = await pool.query(
-      `select to_char(date_trunc('month', start_time), 'Mon') as month,
-              coalesce(sum(rental_amount),0)::numeric as revenue
-       from public.rentals
-       where start_time >= (date_trunc('month', now()) - ($1::int - 1) * interval '1 month')
-       group by 1, date_trunc('month', start_time)
-       order by date_trunc('month', start_time) asc`,
+      `select
+        to_char(date_trunc('month', start_time), 'Mon') as month,
+        to_char(date_trunc('month', start_time), 'YYYY-MM') as month_id,
+        count(*)::int as rentals,
+        coalesce(sum(rental_amount),0)::numeric as revenue,
+        coalesce(sum(deposit_amount),0)::numeric as deposit,
+        coalesce(sum(case when lower(payment_mode) = 'cash' then rental_amount else 0 end),0)::numeric as cash,
+        coalesce(sum(case when lower(payment_mode) = 'upi' then rental_amount else 0 end),0)::numeric as upi
+      from public.rentals
+      where start_time >= (date_trunc('month', now()) - ($1::int - 1) * interval '1 month')
+      group by 1,2, date_trunc('month', start_time)
+      order by date_trunc('month', start_time) asc`,
       [months]
     );
     res.json(
-      (rows || []).map((r) => ({ month: r.month, revenue: Number(r.revenue || 0) }))
+      (rows || []).map((r) => ({
+        month: r.month,
+        month_id: r.month_id,
+        rentals: Number(r.rentals || 0),
+        revenue: Number(r.revenue || 0),
+        deposit: Number(r.deposit || 0),
+        cash: Number(r.cash || 0),
+        upi: Number(r.upi || 0),
+      }))
     );
   } catch (error) {
     res.status(500).json({ error: String(error?.message || error) });

@@ -201,14 +201,19 @@ export default function ReturnVehicle() {
   return (
     <EmployeeLayout>
       <div className="mx-auto w-full max-w-5xl space-y-6">
-        <div>
+        <div className="rounded-3xl border border-evegah-border bg-white p-6 shadow-card">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
             Rentals
           </p>
-          <h1 className="text-2xl font-semibold text-evegah-text">Return Vehicle</h1>
-          <p className="text-sm text-gray-500">
-            Search an active rental and record the vehicle return.
-          </p>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-evegah-text">Return Vehicle</h1>
+              <p className="text-sm text-gray-600">
+                Search an active rental and record the vehicle return.
+              </p>
+            </div>
+            <div className="text-xs text-gray-500">Operational workflow</div>
+          </div>
         </div>
 
         <div className="card space-y-4">

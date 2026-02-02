@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 import StatCard from "../../components/admin/StatCard";
+
 import { apiFetch } from "../../config/api";
 import { formatDateTimeDDMMYYYY } from "../../utils/dateFormat";
 import { formatElapsedMDHM } from "../../utils/durationFormat";
+import { Users, Bike, IndianRupee, Clock, TrendingUp, UserCheck, BarChart2, Activity } from "lucide-react";
 
-import { Users, Bike, IndianRupee, Clock } from "lucide-react";
-
+import { MultiLayerRevenueChart } from "../../components/Charts";
 import {
-	LineChart,
-	Line,
+	ResponsiveContainer,
+	BarChart,
 	CartesianGrid,
 	XAxis,
 	YAxis,
 	Tooltip,
-	ResponsiveContainer,
-	BarChart,
-	Bar,
+	Bar
 } from "recharts";
 
 export default function AdminDashboard() {
@@ -24,13 +23,13 @@ export default function AdminDashboard() {
 	const [error, setError] = useState("");
 
 	const [stats, setStats] = useState([
-		{ title: "Total Riders", value: "-", icon: Users },
-		{ title: "Total Rentals", value: "-", icon: Bike },
-		{ title: "Revenue", value: "-", icon: IndianRupee },
-		{ title: "Active Rides", value: "-", icon: Clock },
+		{ title: "Total Riders", value: "-", icon: Users, color: "bg-blue-100 text-blue-600" },
+		{ title: "Total Rentals", value: "-", icon: Bike, color: "bg-green-100 text-green-600" },
+		{ title: "Revenue", value: "-", icon: IndianRupee, color: "bg-yellow-100 text-yellow-600" },
+		{ title: "Active Rides", value: "-", icon: Activity, color: "bg-purple-100 text-purple-600" },
 	]);
 
-	const [revenueData, setRevenueData] = useState([]);
+	const [multiLayerData, setMultiLayerData] = useState([]);
 	const [rentalsData, setRentalsData] = useState([]);
 	const [returnsData, setReturnsData] = useState([]);
 	const [rentalsByPackageData, setRentalsByPackageData] = useState([]);
@@ -60,7 +59,7 @@ export default function AdminDashboard() {
 					summary,
 					recentRiders,
 					activeRows,
-					revenueSeries,
+					analyticsSeries,
 					rentalsSeries,
 					returnsSeries,
 					packageSeries,
@@ -70,7 +69,7 @@ export default function AdminDashboard() {
 						apiFetch("/api/dashboard/summary"),
 						apiFetch("/api/dashboard/recent-riders?limit=3"),
 						apiFetch("/api/dashboard/active-rentals?limit=5"),
-						apiFetch("/api/dashboard/revenue-months?months=6"),
+						apiFetch("/api/dashboard/analytics-months?months=6"),
 						apiFetch("/api/dashboard/rentals-week"),
 						apiFetch("/api/dashboard/returns-week"),
 						apiFetch("/api/dashboard/rentals-by-package?days=30"),
@@ -80,13 +79,13 @@ export default function AdminDashboard() {
 				if (!mounted) return;
 
 				setStats([
-					{ title: "Total Riders", value: inr.format(Number(summary?.totalRiders || 0)), icon: Users },
-					{ title: "Total Rentals", value: inr.format(Number(summary?.totalRentals || 0)), icon: Bike },
-					{ title: "Revenue", value: `₹${inr.format(Number(summary?.revenue || 0))}`, icon: IndianRupee },
-					{ title: "Active Rides", value: inr.format(Number(summary?.activeRides || 0)), icon: Clock },
+					{ title: "Total Riders", value: inr.format(Number(summary?.totalRiders || 0)), icon: Users, color: "bg-blue-100 text-blue-600" },
+					{ title: "Total Rentals", value: inr.format(Number(summary?.totalRentals || 0)), icon: Bike, color: "bg-green-100 text-green-600" },
+						{ title: "Revenue", value: `₹${inr.format(Number(summary?.revenue || 0))}`, icon: IndianRupee, color: "bg-yellow-100 text-yellow-600" },
+					{ title: "Active Rides", value: inr.format(Number(summary?.activeRides || 0)), icon: Activity, color: "bg-purple-100 text-purple-600" },
 				]);
 
-				setRevenueData(Array.isArray(revenueSeries) ? revenueSeries : []);
+				setMultiLayerData(Array.isArray(analyticsSeries) ? analyticsSeries : []);
 				setRentalsData(Array.isArray(rentalsSeries) ? rentalsSeries : []);
 				setReturnsData(Array.isArray(returnsSeries) ? returnsSeries : []);
 				setRentalsByPackageData(Array.isArray(packageSeries) ? packageSeries : []);
@@ -124,180 +123,322 @@ export default function AdminDashboard() {
 	}, [inr]);
 
 	return (
-		<div className="flex min-h-screen bg-evegah-bg">
+		<div className="admin-viewport h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+
+			{/* Background Pattern */}
+			<div className="absolute inset-0 opacity-5">
+				<div className="absolute top-20 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+				<div className="absolute top-40 right-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+				<div className="absolute -bottom-8 left-40 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+			</div>
+
 			<AdminSidebar />
 
-			<div className="flex-1 p-6">
+			<div className="flex-1 overflow-y-auto relative z-10">
+				<div className="p-10 pb-0">
+				{/* Hero Header */}
 				<div className="mb-6">
-					<h1 className="text-2xl font-semibold text-evegah-text">Dashboard</h1>
-					<p className="text-sm text-evegah-muted">Overview of riders, rentals, and revenue.</p>
+					<div className="flex items-center justify-between">
+						<div>
+							<h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+								Dashboard Overview
+							</h1>
+							<p className="text-lg text-slate-600 mt-2 max-w-2xl">
+								Welcome back! Here's what's happening with your eVEGAH operations today.
+							</p>
+						</div>
+						<div className="flex items-center space-x-4">
+							<div className="bg-white/80 backdrop-blur-lg rounded-3xl px-8 py-4 shadow-2xl border border-white/30">
+								<div className="text-sm text-slate-500 font-medium">Last updated</div>
+								<div className="text-2xl font-bold text-slate-800">
+									{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				{error ? (
-					<div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-						{error}
+					<div className="mb-6 bg-red-50/90 backdrop-blur-lg border border-red-200/50 rounded-3xl p-8 shadow-2xl">
+						<div className="flex items-center space-x-4">
+							<div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center">
+								<span className="text-red-600 text-3xl">⚠️</span>
+							</div>
+							<div>
+								<h3 className="text-2xl font-bold text-red-800">Error Loading Data</h3>
+								<p className="text-red-600 text-lg mt-1">{error}</p>
+							</div>
+						</div>
 					</div>
 				) : null}
 
-				{/* KPI cards */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+				{/* Stats Grid - Modern Glass Cards */}
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 					{stats.map((item, i) => (
-						<StatCard key={i} title={item.title} value={item.value} icon={item.icon} />
+						<div
+							key={i}
+							className="group relative overflow-hidden bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 hover:shadow-2xl hover:scale-102 transition-all duration-300 cursor-pointer"
+						>
+
+							{/* Floating geometric shapes */}
+							<div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -translate-y-6 translate-x-6 group-hover:scale-110 transition-transform duration-300"></div>
+							<div className="absolute bottom-0 left-0 w-12 h-12 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-xl translate-y-3 -translate-x-3 group-hover:rotate-12 transition-transform duration-300"></div>
+
+							<div className="relative z-10">
+								<div className="flex items-center justify-between mb-4">
+									<div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+										<item.icon className="w-6 h-6" />
+									</div>
+									<div className="text-2xl opacity-20 group-hover:opacity-60 transition-opacity duration-300 font-bold text-slate-400">
+										#{i + 1}
+									</div>
+								</div>
+								<div className="space-y-1">
+									<div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+										{item.title}
+									</div>
+									<div className="text-2xl font-black text-slate-800 group-hover:text-indigo-600 transition-colors duration-300">
+										{item.value}
+									</div>
+								</div>
+							</div>
+						</div>
 					))}
 				</div>
 
-				{/* Main grid */}
-				<div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-					<div className="xl:col-span-2 bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Revenue Overview</h2>
-							<div className="flex items-center gap-2">
-								<button type="button" className="px-3 py-1.5 rounded-xl text-xs font-medium bg-blue-50 text-blue-700">
-									24 hours
-								</button>
-								<button type="button" className="px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100">
-									30 days
-								</button>
-								<button type="button" className="px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100">
-									1 year
+				{/* Main Content - Creative Layout */}
+				<div className="space-y-6">
+					{/* Primary Chart Section */}
+					<div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 hover:shadow-2xl transition-all duration-300">
+						<div className="flex items-center justify-between gap-6 mb-6">
+							<div className="flex items-center space-x-4">
+								<div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+									<BarChart2 className="w-5 h-5 text-white" />
+								</div>
+								<div>
+									<h2 className="text-2xl font-bold text-slate-800">Revenue & Rentals Overview</h2>
+									<p className="text-slate-600 text-sm">Track your business performance over time</p>
+								</div>
+							</div>
+							<div className="flex items-center space-x-3">
+								<div className="flex space-x-2">
+									<div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+									<div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+									<div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+								</div>
+								<button type="button" className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl text-sm">
+									6 months
 								</button>
 							</div>
 						</div>
-
-						<div className="text-blue-600">
-							<ResponsiveContainer width="100%" height={260}>
-								<LineChart data={revenueData}>
-									<Line type="monotone" dataKey="revenue" stroke="currentColor" strokeWidth={3} dot={false} />
-									<CartesianGrid strokeDasharray="3 3" />
-									<XAxis dataKey="month" />
-									<YAxis />
-									<Tooltip />
-								</LineChart>
-							</ResponsiveContainer>
+						<div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4">
+							<MultiLayerRevenueChart data={multiLayerData} />
 						</div>
 					</div>
 
-					<div className="bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Weekly Rentals</h2>
-							<button type="button" className="text-xs font-medium text-gray-600 hover:text-gray-900">
-								Download
-							</button>
-						</div>
-
-						<div className="text-blue-600">	
-							<ResponsiveContainer width="100%" height={260}>
-								<BarChart data={rentalsData}>
-									<Bar dataKey="rentals" fill="currentColor" radius={[8, 8, 0, 0]} />
-									<CartesianGrid strokeDasharray="3 3" />
-									<XAxis dataKey="day" />
-									<YAxis />
-									<Tooltip />
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
-
-					<div className="bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Recent Rider</h2>
-							<span className="text-xs text-evegah-muted">History</span>
-						</div>
-
-						<div className="space-y-3">
-							{recentUsers.map((u, i) => (
-								<div key={i} className="rounded-2xl border border-evegah-border bg-white p-4">
-									<div className="text-sm font-semibold text-evegah-text">{u.name}</div>
-									<div className="text-xs text-evegah-muted">{u.mobile}</div>
-								</div>
-							))}
-						</div>
-					</div>
-
-					<div className="xl:col-span-2 bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Active Rentals</h2>
-							<span className="text-xs text-evegah-muted">Live</span>
-						</div>
-
-						<div className="divide-y divide-evegah-border">
-							{activeRentals.map((r, i) => (
-								<div key={i} className="flex items-center justify-between gap-4 py-4">
-									<div>
-										<div className="text-sm font-semibold text-evegah-text">{r.user}</div>
-										<div className="text-xs text-evegah-muted">
-											{r.vehicle} • {r.id}
-										</div>
-										{r.startLabel && r.startLabel !== "-" ? (
-											<div className="text-[11px] text-gray-400">Started {r.startLabel}</div>
-										) : null}
+					{/* Secondary Charts Row */}
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+						{/* Weekly Rentals */}
+						<div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 hover:shadow-2xl transition-all duration-300 group">
+							<div className="flex items-center justify-between gap-4 mb-4">
+								<div className="flex items-center space-x-3">
+									<div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+										<Bike className="w-4 h-4 text-white" />
 									</div>
-									<div className="text-sm font-semibold text-blue-700">{r.duration}</div>
+									<h3 className="text-lg font-bold text-slate-800">Weekly Rentals</h3>
 								</div>
-							))}
+								<button type="button" className="text-slate-500 hover:text-slate-700 transition-colors p-2 hover:bg-slate-100 rounded-xl">
+									<TrendingUp className="w-4 h-4" />
+								</button>
+							</div>
+							<div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-3">
+								<ResponsiveContainer width="100%" height={200}>
+									<BarChart data={rentalsData}>
+										<Bar dataKey="rentals" fill="url(#weeklyGradient)" radius={[8, 8, 0, 0]} />
+										<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+										<XAxis dataKey="day" stroke="#64748b" fontSize={10} />
+										<YAxis stroke="#64748b" fontSize={10} />
+										<Tooltip
+											contentStyle={{
+												backgroundColor: 'rgba(255, 255, 255, 0.95)',
+												border: 'none',
+												borderRadius: '12px',
+												boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+											}}
+										/>
+										<defs>
+											<linearGradient id="weeklyGradient" x1="0" y1="0" x2="0" y2="1">
+												<stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+												<stop offset="95%" stopColor="#3b82f6" stopOpacity={0.8}/>
+											</linearGradient>
+										</defs>
+									</BarChart>
+								</ResponsiveContainer>
+							</div>
+						</div>
 
-							{loading && activeRentals.length === 0 ? (
-								<div className="py-4 text-sm text-evegah-muted">Loading...</div>
-							) : null}
+						{/* Recent Riders */}
+						<div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 hover:shadow-2xl transition-all duration-300">
+							<div className="flex items-center justify-between gap-4 mb-4">
+								<div className="flex items-center space-x-3">
+									<div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+										<Users className="w-4 h-4 text-white" />
+									</div>
+									<h3 className="text-lg font-bold text-slate-800">Recent Riders</h3>
+								</div>
+								<span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Live</span>
+							</div>
+							<div className="space-y-3">
+								{recentUsers.slice(0, 4).map((u, i) => (
+									<div key={i} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl hover:from-slate-100 hover:to-slate-200 transition-all duration-300">
+										<div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+											{u.name.charAt(0).toUpperCase()}
+										</div>
+										<div className="flex-1 min-w-0">
+											<div className="font-medium text-slate-800 text-sm truncate">{u.name}</div>
+											<div className="text-xs text-slate-500">{u.mobile}</div>
+										</div>
+										<div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+									</div>
+								))}
+							</div>
+						</div>
+
+						{/* Active Rentals */}
+						<div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 hover:shadow-2xl transition-all duration-300">
+							<div className="flex items-center justify-between gap-4 mb-4">
+								<div className="flex items-center space-x-3">
+									<div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+										<Activity className="w-4 h-4 text-white" />
+									</div>
+									<h3 className="text-lg font-bold text-slate-800">Active Rentals</h3>
+								</div>
+								<span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Live</span>
+							</div>
+							<div className="space-y-3">
+								{activeRentals.slice(0, 3).map((r, i) => (
+									<div key={i} className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-100">
+										<div className="flex items-center justify-between mb-1">
+											<div className="font-medium text-slate-800 text-sm truncate">{r.user}</div>
+											<div className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+												{r.duration}
+											</div>
+										</div>
+										<div className="text-xs text-slate-600 truncate">{r.vehicle}</div>
+										{r.startLabel && r.startLabel !== "-" && (
+											<div className="text-xs text-slate-500 mt-1">Started {r.startLabel}</div>
+										)}
+									</div>
+								))}
+								{loading && activeRentals.length === 0 && (
+									<div className="text-center py-6 text-slate-500">
+										<div className="animate-spin w-6 h-6 border-4 border-orange-200 border-t-orange-500 rounded-full mx-auto mb-2"></div>
+										<div className="text-xs">Loading...</div>
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
 
-					<div className="bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Rentals by Package (30 Days)</h2>
-							<span className="text-xs text-evegah-muted">Breakdown</span>
+					{/* Bottom Analytics Row */}
+					<div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+						{/* Rentals by Package */}
+						<div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/30 hover:shadow-3xl transition-all duration-500">
+							<div className="flex items-center justify-between gap-4 mb-4">
+								<h3 className="text-xl font-bold text-slate-800">Rentals by Package</h3>
+								<span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">30 Days</span>
+							</div>
+							<div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4">
+								<ResponsiveContainer width="100%" height={240}>
+									<BarChart data={rentalsByPackageData}>
+										<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+										<XAxis dataKey="package" stroke="#64748b" />
+										<YAxis stroke="#64748b" />
+										<Tooltip
+											contentStyle={{
+												backgroundColor: 'rgba(255, 255, 255, 0.95)',
+												border: 'none',
+												borderRadius: '16px',
+												boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+											}}
+										/>
+										<Bar dataKey="rentals" fill="url(#packageGradient)" radius={[12, 12, 0, 0]} />
+										<defs>
+											<linearGradient id="packageGradient" x1="0" y1="0" x2="0" y2="1">
+												<stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+												<stop offset="95%" stopColor="#a855f7" stopOpacity={0.8}/>
+											</linearGradient>
+										</defs>
+									</BarChart>
+								</ResponsiveContainer>
+							</div>
 						</div>
 
-						<div className="text-blue-600">
-							<ResponsiveContainer width="100%" height={260}>
-								<BarChart data={rentalsByPackageData}>
-									<CartesianGrid strokeDasharray="3 3" />
-									<XAxis dataKey="package" />
-									<YAxis />
-									<Tooltip />
-									<Bar dataKey="rentals" fill="currentColor" radius={[8, 8, 0, 0]} />
-								</BarChart>
-							</ResponsiveContainer>
+						{/* Returns This Week */}
+						<div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/30 hover:shadow-3xl transition-all duration-500">
+							<div className="flex items-center justify-between gap-4 mb-4">
+								<h3 className="text-xl font-bold text-slate-800">Returns This Week</h3>
+								<span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Trend</span>
+							</div>
+							<div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-4">
+								<ResponsiveContainer width="100%" height={240}>
+									<BarChart data={returnsData}>
+										<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+										<XAxis dataKey="day" stroke="#64748b" />
+										<YAxis stroke="#64748b" />
+										<Tooltip
+											contentStyle={{
+												backgroundColor: 'rgba(255, 255, 255, 0.95)',
+												border: 'none',
+												borderRadius: '16px',
+												boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+											}}
+										/>
+										<Bar dataKey="returns" fill="url(#returnsGradient)" radius={[12, 12, 0, 0]} />
+										<defs>
+											<linearGradient id="returnsGradient" x1="0" y1="0" x2="0" y2="1">
+												<stop offset="5%" stopColor="#ec4899" stopOpacity={0.8}/>
+												<stop offset="95%" stopColor="#f43f5e" stopOpacity={0.8}/>
+											</linearGradient>
+										</defs>
+									</BarChart>
+								</ResponsiveContainer>
+							</div>
+						</div>
+
+						{/* Rentals by Zone */}
+						<div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/30 hover:shadow-3xl transition-all duration-500">
+							<div className="flex items-center justify-between gap-4 mb-4">
+								<h3 className="text-xl font-bold text-slate-800">Rentals by Zone</h3>
+								<span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">30 Days</span>
+							</div>
+							<div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-4">
+								<ResponsiveContainer width="100%" height={240}>
+									<BarChart data={rentalsByZoneData}>
+										<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+										<XAxis dataKey="zone" stroke="#64748b" />
+										<YAxis stroke="#64748b" />
+										<Tooltip
+											contentStyle={{
+												backgroundColor: 'rgba(255, 255, 255, 0.95)',
+												border: 'none',
+												borderRadius: '16px',
+												boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+											}}
+										/>
+										<Bar dataKey="rentals" fill="url(#zoneGradient)" radius={[12, 12, 0, 0]} />
+										<defs>
+											<linearGradient id="zoneGradient" x1="0" y1="0" x2="0" y2="1">
+												<stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
+												<stop offset="95%" stopColor="#3b82f6" stopOpacity={0.8}/>
+											</linearGradient>
+										</defs>
+									</BarChart>
+								</ResponsiveContainer>
+							</div>
 						</div>
 					</div>
-
-					<div className="bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Returns This Week</h2>
-							<span className="text-xs text-evegah-muted">Trend</span>
-						</div>
-
-						<div className="text-blue-600">
-							<ResponsiveContainer width="100%" height={260}>
-								<BarChart data={returnsData}>
-									<CartesianGrid strokeDasharray="3 3" />
-									<XAxis dataKey="day" />
-									<YAxis />
-									<Tooltip />
-									<Bar dataKey="returns" fill="currentColor" radius={[8, 8, 0, 0]} />
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
-
-					<div className="bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
-						<div className="flex items-center justify-between gap-4 mb-4">
-							<h2 className="text-base font-semibold text-evegah-text">Rentals by Zone (30 Days)</h2>
-							<span className="text-xs text-evegah-muted">Distribution</span>
-						</div>
-
-						<div className="text-blue-600">
-							<ResponsiveContainer width="100%" height={260}>
-								<BarChart data={rentalsByZoneData}>
-									<CartesianGrid strokeDasharray="3 3" />
-									<XAxis dataKey="zone" />
-									<YAxis />
-									<Tooltip />
-									<Bar dataKey="rentals" fill="currentColor" radius={[8, 8, 0, 0]} />
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
+				</div>
 				</div>
 			</div>
 		</div>

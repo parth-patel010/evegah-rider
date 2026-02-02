@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import { useRiderForm } from "../useRiderForm";
@@ -22,6 +22,7 @@ export default function Step5Payment() {
   const configuredUpiId = import.meta.env.VITE_EVEGAH_UPI_ID;
   const defaultUpiId = "temp.evegah@okaxis";
   const payeeName = import.meta.env.VITE_EVEGAH_PAYEE_NAME || "Evegah";
+  const iciciEnabled = import.meta.env.VITE_ICICI_ENABLED === "true";
 
   const amount = Number(formData.totalAmount || 0);
   const cashAmount = Number(formData.cashAmount || 0);
@@ -32,6 +33,10 @@ export default function Step5Payment() {
       ? "Split (Cash + Online)"
       : `${formData.paymentMode.charAt(0).toUpperCase()}${formData.paymentMode.slice(1)}`
     : "-";
+
+  const [iciciQrData, setIciciQrData] = useState(null);
+  const [iciciQrLoading, setIciciQrLoading] = useState(false);
+  const [iciciQrError, setIciciQrError] = useState("");
 
   const prepareDocumentForSubmission = (value) => {
     if (!value) return null;
@@ -55,11 +60,65 @@ export default function Step5Payment() {
     return null;
   };
 
+  const effectiveUpiId = configuredUpiId || defaultUpiId;
+  const upiPayload = useMemo(() => {
+    if (!effectiveUpiId) return "";
+    const params = new URLSearchParams({
+      pa: effectiveUpiId,
+      pn: payeeName,
+      am: amount ? String(amount) : "",
+      cu: "INR",
+    });
+    return `upi://pay?${params.toString()}`;
+  }, [effectiveUpiId, payeeName, amount]);
+
+  // Generate ICICI QR when ICICI is enabled.
+  useEffect(() => {
+    if (!iciciEnabled || !amount || !formData.name) return;
+
+    let cancelled = false;
+
+    const generateQr = async () => {
+      setIciciQrLoading(true);
+      setIciciQrError("");
+      try {
+        const response = await apiFetch("/api/payments/icici/qr", {
+          method: "POST",
+          body: {
+            amount,
+            // ICICI expects merchantTranId + billNumber in the encrypted payload.
+            merchantTranId: `EVG${Date.now()}${Math.random().toString(16).slice(2, 6)}`.slice(0, 35),
+            billNumber: `EVG-${Date.now()}`.slice(0, 50),
+          },
+        });
+        if (!cancelled) setIciciQrData(response);
+      } catch (error) {
+        console.error("ICICI QR generation failed:", error);
+        if (!cancelled) setIciciQrError(String(error?.message || error));
+      } finally {
+        if (!cancelled) setIciciQrLoading(false);
+      }
+    };
+
+    generateQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [iciciEnabled, amount, formData.name]);
+
   const buildReceiptPayload = (snapshot) => ({
     fullName: snapshot?.fullName || snapshot?.name || "",
     name: snapshot?.name || snapshot?.fullName || "",
     phone: snapshot?.phone || "",
     mobile: snapshot?.mobile || snapshot?.phone || "",
+
+    // Rider profile
+    aadhaar: snapshot?.aadhaar || "",
+    dob: snapshot?.dob || null,
+    gender: snapshot?.gender || "",
+    reference: snapshot?.reference || "",
+    permanentAddress: snapshot?.permanentAddress || "",
+    temporaryAddress: snapshot?.temporaryAddress || "",
 
     // Rider / agreement (optional)
     operationalZone: snapshot?.operationalZone || snapshot?.zone || "",
@@ -88,19 +147,6 @@ export default function Step5Payment() {
     // Signature only (small). Photos intentionally excluded.
     riderSignature: typeof snapshot?.riderSignature === "string" ? snapshot.riderSignature : null,
   });
-
-  const effectiveUpiId = configuredUpiId || defaultUpiId;
-  const upiPayload = useMemo(() => {
-    if (!effectiveUpiId) return "";
-    const params = new URLSearchParams({
-      pa: effectiveUpiId,
-      pn: payeeName,
-      am: amount ? String(amount) : "",
-      cu: "INR",
-    });
-    return `upi://pay?${params.toString()}`;
-  }, [effectiveUpiId, payeeName, amount]);
-
 
   const handleSubmit = async () => {
     setSubmitError("");
@@ -303,20 +349,57 @@ export default function Step5Payment() {
               Scan to pay via UPI.
             </p>
 
-            {upiPayload && (
-              <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
-                <QRCodeCanvas value={upiPayload} size={180} />
-              </div>
+            {iciciEnabled ? (
+              <>
+                {iciciQrLoading && (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-evegah-primary"></div>
+                    <span className="ml-2 text-sm text-gray-500">Generating QR...</span>
+                  </div>
+                )}
+                {iciciQrError && (
+                  <p className="text-sm text-red-600">
+                    ICICI QR generation failed: {iciciQrError}
+                  </p>
+                )}
+                {iciciQrData?.qrCode && (
+                  <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
+                    {iciciQrData.qrCode.startsWith('data:') || iciciQrData.qrCode.startsWith('http') ? (
+                      <img src={iciciQrData.qrCode} alt="ICICI Payment QR" className="w-45 h-45" />
+                    ) : (
+                      <img src={`data:image/png;base64,${iciciQrData.qrCode}`} alt="ICICI Payment QR" className="w-45 h-45" />
+                    )}
+                  </div>
+                )}
+                {iciciQrData?.qrString && !iciciQrData?.qrCode && (
+                  <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
+                    <QRCodeCanvas value={iciciQrData.qrString} size={180} />
+                  </div>
+                )}
+                {!iciciQrLoading && !iciciQrError && !iciciQrData?.qrCode && (
+                  <p className="text-sm text-gray-500">
+                    ICICI QR not available
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                {upiPayload && (
+                  <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
+                    <QRCodeCanvas value={upiPayload} size={180} />
+                  </div>
+                )}
+                {!configuredUpiId ? (
+                  <p className="text-sm text-red-600">
+                    UPI QR is not configured, showing a temporary placeholder. Set `VITE_EVEGAH_UPI_ID` in your `.env` to use the real business QR.
+                  </p>
+                ) : null}
+              </>
             )}
-            {!configuredUpiId ? (
-              <p className="text-sm text-red-600">
-                UPI QR is not configured, showing a temporary placeholder. Set `VITE_EVEGAH_UPI_ID` in your `.env` to use the real business QR.
-              </p>
-            ) : null}
 
             <div className="text-sm text-evegah-text space-y-1">
               <div>
-                <span className="text-gray-500">Total Amount:</span> {amount}
+                <span className="text-gray-500">Total Amount:</span> ₹{amount}
               </div>
               <div>
                 <span className="text-gray-500">Payment Mode:</span> {paymentModeLabel}
@@ -324,13 +407,13 @@ export default function Step5Payment() {
               {formData.paymentMode === "split" ? (
                 <>
                   <div>
-                    <span className="text-gray-500">Cash Paid:</span> {cashAmount}
+                    <span className="text-gray-500">Cash Paid:</span> ₹{cashAmount}
                   </div>
                   <div>
-                    <span className="text-gray-500">Online Paid:</span> {onlineAmount}
+                    <span className="text-gray-500">Online Paid:</span> ₹{onlineAmount}
                   </div>
                   <div>
-                    <span className="text-gray-500">Total Paid:</span> {totalPaid}
+                    <span className="text-gray-500">Total Paid:</span> ₹{totalPaid}
                   </div>
                 </>
               ) : null}

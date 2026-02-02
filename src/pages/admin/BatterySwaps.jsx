@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 
-import { Edit, Eye, Search, Trash2 } from "lucide-react";
+import { Edit, Eye, Trash2, Battery, TrendingUp, Car, Clock, Zap, User, CheckSquare, Square } from "lucide-react";
 
 import {
   adminBatterySwapsDaily,
@@ -41,7 +41,6 @@ export default function AdminBatterySwapsPage() {
   const [batteryTopBatteriesData, setBatteryTopBatteriesData] = useState([]);
   const [batteryTopVehiclesData, setBatteryTopVehiclesData] = useState([]);
 
-  const [swapSearch, setSwapSearch] = useState("");
   const [swapRefresh, setSwapRefresh] = useState(0);
 
   const [editingSwapId, setEditingSwapId] = useState("");
@@ -122,7 +121,7 @@ export default function AdminBatterySwapsPage() {
     setError("");
     try {
       const [swapRows, swapDaily, topBatteries, topVehicles] = await Promise.all([
-        adminListBatterySwaps({ search: swapSearch }).catch(() => []),
+        adminListBatterySwaps().catch(() => []),
         adminBatterySwapsDaily({ days: 14 }).catch(() => []),
         adminBatterySwapsTopBatteries({ days: 30 }).catch(() => []),
         adminBatterySwapsTopVehicles({ days: 30 }).catch(() => []),
@@ -151,7 +150,7 @@ export default function AdminBatterySwapsPage() {
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [swapSearch, swapRefresh]);
+  }, [swapRefresh]);
 
   useEffect(() => {
     setSelectedSwapIds((prev) =>
@@ -334,7 +333,9 @@ export default function AdminBatterySwapsPage() {
     };
   }, [batterySwaps, batteryTopBatteriesData, batteryTopVehiclesData]);
 
-  const visibleSwaps = batterySwaps || [];
+  const visibleSwaps = useMemo(() => {
+    return Array.isArray(batterySwaps) ? batterySwaps : [];
+  }, [batterySwaps]);
 
   const visibleSwapIds = useMemo(
     () => visibleSwaps.map((row) => String(row?.id || "")),
@@ -357,14 +358,23 @@ export default function AdminBatterySwapsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-evegah-bg">
+    <div className="admin-viewport h-screen flex bg-white relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+      </div>
+
       <AdminSidebar />
 
-      <div className="flex-1 p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-evegah-text">Battery Swaps</h1>
-          <p className="text-sm text-evegah-muted">View, edit, and delete battery swap records.</p>
-        </div>
+      <main className="flex-1 overflow-y-auto relative z-10">
+        <div className="p-10">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">Battery Swaps</h1>
+            <p className="text-slate-600 mt-2 text-base font-normal">View, edit, and delete battery swap records.</p>
+          </div>
 
         {error ? (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -372,23 +382,41 @@ export default function AdminBatterySwapsPage() {
           </div>
         ) : null}
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-evegah-border bg-white p-4 shadow-card">
-            <div className="text-xs text-evegah-muted">Swaps Loaded</div>
-            <div className="mt-1 text-xl font-semibold text-evegah-text">{headerStats.totalSwapsShown}</div>
-          </div>
-          <div className="rounded-2xl border border-evegah-border bg-white p-4 shadow-card">
-            <div className="text-xs text-evegah-muted">Top Battery (30 days)</div>
-            <div className="mt-1 text-xl font-semibold text-evegah-text">{headerStats.topBattery}</div>
-          </div>
-          <div className="rounded-2xl border border-evegah-border bg-white p-4 shadow-card">
-            <div className="text-xs text-evegah-muted">Top Vehicle (30 days)</div>
-            <div className="mt-1 text-xl font-semibold text-evegah-text">{headerStats.topVehicle}</div>
-          </div>
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {[
+            ["Swaps Loaded", headerStats.totalSwapsShown, "text-slate-800", Battery],
+            ["Top Battery (30 days)", headerStats.topBattery, "text-blue-600", TrendingUp],
+            ["Top Vehicle (30 days)", headerStats.topVehicle, "text-green-600", Car],
+          ].map(([label, value, color, Icon]) => (
+            <div key={label} className="group relative overflow-hidden bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 hover:shadow-2xl hover:scale-102 transition-all duration-300 cursor-pointer">
+              {/* Floating geometric shapes */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -translate-y-6 translate-x-6 group-hover:scale-110 transition-transform duration-300"></div>
+              <div className="absolute bottom-0 left-0 w-12 h-12 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-xl translate-y-3 -translate-x-3 group-hover:rotate-12 transition-transform duration-300"></div>
+
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div className="text-2xl opacity-20 group-hover:opacity-60 transition-opacity duration-300 font-bold text-slate-400">
+                    #
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {label}
+                  </div>
+                  <div className={`text-2xl font-black ${color} group-hover:text-blue-600 transition-colors duration-300`}>
+                    {value}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-3">
-          <div className="xl:col-span-2 bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
+        <div className="mb-8 grid grid-cols-1 gap-5 xl:grid-cols-3">
+          <div className="xl:col-span-2 bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30">
             <div className="flex items-center justify-between gap-4 mb-4">
               <h2 className="text-base font-semibold text-evegah-text">Battery Swaps (14 Days)</h2>
               <span className="text-xs text-evegah-muted">Area</span>
@@ -414,7 +442,7 @@ export default function AdminBatterySwapsPage() {
             </div>
           </div>
 
-          <div className="bg-evegah-card border border-evegah-border shadow-card rounded-2xl p-6">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30">
             <div className="flex items-center justify-between gap-4 mb-4">
               <h2 className="text-base font-semibold text-evegah-text">Top Batteries (30 Days)</h2>
               <span className="text-xs text-evegah-muted">Pie</span>
@@ -433,21 +461,11 @@ export default function AdminBatterySwapsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow border overflow-hidden">
+        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 overflow-hidden">
           <div className="p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <h2 className="text-base font-semibold text-evegah-text">Battery Swaps</h2>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center bg-gray-100 px-3 py-2 rounded-md w-full sm:w-72">
-                <Search size={16} className="text-gray-600" />
-                <input
-                  placeholder="Search vehicle, battery, rider, employee"
-                  value={swapSearch}
-                  onChange={(e) => setSwapSearch(e.target.value)}
-                  className="bg-transparent outline-none ml-2 w-full"
-                />
-              </div>
-
               <div className="flex items-center gap-2">
                 {selectedSwapIds.length > 0 ? (
                   <span className="text-xs text-red-600">
@@ -480,49 +498,140 @@ export default function AdminBatterySwapsPage() {
           ) : visibleSwaps.length === 0 ? (
             <div className="p-6 text-center text-gray-500">No swaps found.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
-                  <tr>
-                    <th className="px-4 py-3 text-left w-12">
-                      <input
-                        type="checkbox"
-                        checked={allVisibleSelected}
-                        onChange={toggleSelectVisible}
-                        aria-label="Select swaps"
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left">Time</th>
-                    <th className="px-4 py-3 text-left">Vehicle</th>
-                    <th className="px-4 py-3 text-left">Battery Out</th>
-                    <th className="px-4 py-3 text-left">Battery In</th>
-                    <th className="px-4 py-3 text-left">Rider</th>
-                    <th className="px-4 py-3 text-left">Actions</th>
-                  </tr>
-                </thead>
+            <div className="space-y-4">
+              {/* Bulk Actions Bar */}
+              <div className="flex items-center justify-between bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/30">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-3 text-slate-700 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectVisible}
+                      className="w-4 h-4 text-blue-600 bg-white/50 border-white/50 rounded focus:ring-blue-500/50"
+                    />
+                    Select All ({visibleSwaps.length})
+                  </label>
+                  {selectedSwapIds.length > 0 && (
+                    <span className="text-sm text-blue-600 font-semibold bg-blue-100/80 px-3 py-1 rounded-full">
+                      {selectedSwapIds.length} selected
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {selectedSwapIds.length > 0 && (
+                    <button
+                      type="button"
+                      className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold shadow-lg hover:bg-red-600 transition-all duration-200"
+                      disabled={swapBusy}
+                      onClick={bulkDeleteSelected}
+                    >
+                      Delete Selected
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold shadow-lg hover:bg-blue-600 transition-all duration-200"
+                    disabled={swapBusy}
+                    onClick={() => setSwapRefresh((x) => x + 1)}
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
 
-                <tbody>
-                  {visibleSwaps.map((row) => (
-                    <tr key={row?.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedSwapIds.includes(String(row?.id || ""))}
-                          onChange={() => toggleSwapSelection(row?.id)}
-                          aria-label={`Select swap ${row?.id}`}
-                        />
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">{fmtSwapTime(row?.swapped_at || row?.created_at)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{row?.vehicle_number || "-"}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{row?.battery_out || "-"}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{row?.battery_in || "-"}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{row?.rider_full_name || row?.rider_mobile || "-"}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+              {/* Cards Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {visibleSwaps.map((row, index) => (
+                  <div
+                    key={row?.id}
+                    className="group relative bg-white/70 backdrop-blur-xl rounded-3xl p-6 shadow-xl border border-white/30 hover:shadow-2xl hover:scale-102 transition-all duration-300 cursor-pointer overflow-hidden"
+                  >
+                    {/* Selection Indicator */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <button
+                        type="button"
+                        onClick={() => toggleSwapSelection(row?.id)}
+                        className="w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/90 transition-all duration-200"
+                      >
+                        {selectedSwapIds.includes(String(row?.id || "")) ? (
+                          <CheckSquare className="w-4 h-4 text-blue-600" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Floating geometric shapes */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full -translate-y-8 translate-x-8 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-2xl translate-y-6 -translate-x-6 group-hover:rotate-12 transition-transform duration-500"></div>
+
+                    <div className="relative z-10">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                            <Zap className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900">Swap #{String(row?.id || "").slice(-4)}</h3>
+                            <p className="text-sm text-slate-500">Battery Exchange</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Grid */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Time</span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-800">{fmtSwapTime(row?.swapped_at || row?.created_at)}</p>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Vehicle</span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-800">{row?.vehicle_number || "-"}</p>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Battery className="w-4 h-4 text-red-400" />
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Battery Out</span>
+                          </div>
+                          <p className="text-sm font-semibold text-red-600">{row?.battery_out || "-"}</p>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Battery className="w-4 h-4 text-green-400" />
+                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Battery In</span>
+                          </div>
+                          <p className="text-sm font-semibold text-green-600">{row?.battery_in || "-"}</p>
+                        </div>
+                      </div>
+
+                      {/* Rider Info */}
+                      <div className="bg-slate-50/50 rounded-2xl p-3 mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="w-4 h-4 text-slate-400" />
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Rider</span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-800">{row?.rider_full_name || row?.rider_mobile || "-"}</p>
+                        {row?.rider_mobile && (
+                          <p className="text-xs text-slate-500 mt-1">{row.rider_mobile}</p>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-between pt-3 border-t border-white/30">
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            className="p-2 rounded hover:bg-gray-100"
-                            title="View"
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all duration-200 text-sm font-medium"
                             onClick={() =>
                               openDetailsWithSearch({
                                 title: row?.vehicle_number ? `Vehicle ${row.vehicle_number}` : "Swap Details",
@@ -534,11 +643,15 @@ export default function AdminBatterySwapsPage() {
                               })
                             }
                           >
-                            <Eye size={16} className="text-gray-700" />
+                            <Eye className="w-4 h-4" />
+                            View
                           </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            className="p-2 rounded hover:bg-gray-100"
+                            className="p-2 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all duration-200"
                             title="Edit"
                             disabled={swapBusy}
                             onClick={() => {
@@ -554,11 +667,11 @@ export default function AdminBatterySwapsPage() {
                               startEditSwap(row);
                             }}
                           >
-                            <Edit size={16} className="text-gray-700" />
+                            <Edit className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            className="p-2 rounded hover:bg-gray-100"
+                            className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
                             title="Delete"
                             disabled={swapBusy}
                             onClick={async () => {
@@ -566,19 +679,31 @@ export default function AdminBatterySwapsPage() {
                               setSwapRefresh((x) => x + 1);
                             }}
                           >
-                            <Trash2 size={16} className="text-red-600" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Empty State */}
+              {visibleSwaps.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                    <Battery className="w-12 h-12 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Battery Swaps Found</h3>
+                  <p className="text-slate-500">There are no battery swap records to display.</p>
+                </div>
+              )}
             </div>
           )}
 
         </div>
       </div>
+      </main>
 
       {detailsOpen ? (
         <div
@@ -588,7 +713,7 @@ export default function AdminBatterySwapsPage() {
             if (e.target === e.currentTarget) closeDetails();
           }}
         >
-          <div className="w-full max-w-5xl rounded-2xl border border-evegah-border bg-white shadow-card">
+          <div className="w-full max-w-5xl bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30">
             <div className="flex items-start justify-between gap-4 border-b border-evegah-border p-4">
               <div>
                 <div className="text-lg font-semibold text-evegah-text">{detailsTitle}</div>

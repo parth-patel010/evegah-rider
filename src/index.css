@@ -7,26 +7,69 @@
 ================================ */
 body {
   @apply bg-evegah-bg text-evegah-text;
-  font-family: "Poppins", "Metropolis", system-ui, sans-serif;
+  font-family: "Segoe UI", Roboto, "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ===============================
+   CUSTOM ANIMATIONS
+================================ */
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
 /* ===============================
    TYPOGRAPHY
 ================================ */
 h1 {
-  @apply text-2xl font-semibold;
+  @apply text-3xl font-bold tracking-tight;
 }
 
 h2 {
-  @apply text-xl font-semibold;
+  @apply text-2xl font-semibold tracking-tight;
 }
 
 h3 {
+  @apply text-xl font-semibold tracking-tight;
+}
+
+h4 {
   @apply text-lg font-medium;
 }
 
 p {
-  @apply text-sm text-evegah-muted;
+  @apply text-base text-evegah-muted leading-relaxed;
+}
+
+.text-small {
+  @apply text-xs font-medium;
+}
+
+.text-medium {
+  @apply text-sm font-medium;
+}
+
+.text-normal {
+  @apply text-base font-normal;
+}
+
+.text-large {
+  @apply text-lg font-medium;
+}
+
+.text-xlarge {
+  @apply text-xl font-semibold;
+}
+
+.text-2xlarge {
+  @apply text-2xl font-bold;
+}
+
+.text-3xlarge {
+  @apply text-3xl font-bold;
 }
 
 /* ===============================
@@ -126,4 +169,20 @@ p {
 
 .section {
   @apply space-y-4;
+}
+
+/* ===============================
+   ADMIN COMPACT VIEW
+   Makes 100% browser zoom look like ~90%
+================================ */
+.admin-viewport {
+  zoom: 0.9;
+}
+
+@supports not (zoom: 1) {
+  .admin-viewport {
+    transform: scale(0.9);
+    transform-origin: top left;
+    width: 111.111%;
+  }
 }

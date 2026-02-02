@@ -11,3 +11,4 @@ export default function StatCard({ icon, title, value }) {
     </div>
   );
 }
+  

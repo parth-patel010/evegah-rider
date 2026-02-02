@@ -25,6 +25,17 @@ const toDateTimeLocal = (date = new Date()) => {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 };
 
+const parseMaybeJson = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
 function RetainRiderInner() {
       // State for completion message
       const [retainSuccess, setRetainSuccess] = useState(false);
@@ -226,17 +237,22 @@ function RetainRiderInner() {
     setBatteryQuery("");
   };
 
-  const prefillFromLastRental = async (riderId) => {
+  const prefillFromLastRental = async (riderId, { preferZone } = {}) => {
     if (!riderId) return;
     try {
       const rentals = await apiFetch(`/api/riders/${encodeURIComponent(riderId)}/rentals`);
       const last = Array.isArray(rentals) ? rentals[0] : null;
       if (!last) return;
 
+      const rentalMeta = parseMaybeJson(last?.meta) || {};
+
       const vehicleId = String(last.bike_id || "").trim();
       const batteryId = String(last.battery_id || "").trim();
 
       const next = {};
+      if (preferZone && rentalMeta?.zone) {
+        next.operationalZone = String(rentalMeta.zone || "").trim();
+      }
       if (vehicleId && !unavailableVehicleSet.has(normalizeIdForCompare(vehicleId))) {
         next.bikeId = vehicleId;
       }
@@ -271,12 +287,26 @@ function RetainRiderInner() {
     const dobRaw = r?.dob || r?.date_of_birth || "";
     const dob = dobRaw ? String(dobRaw).slice(0, 10) : "";
 
+    const riderMeta = parseMaybeJson(r?.meta) || {};
+    const permanentAddress = r?.permanent_address || r?.permanentAddress || "";
+    const temporaryAddress = r?.temporary_address || r?.temporaryAddress || "";
+    const reference = r?.reference || "";
+
+    const inferredZone =
+      String(riderMeta?.zone || r?.operationalZone || r?.zone || "").trim() || "";
+
+    const preferZoneFromRentals = !inferredZone;
+
     updateForm({
       name,
       phone,
       aadhaar,
       gender,
       dob,
+      reference,
+      permanentAddress,
+      temporaryAddress,
+      operationalZone: inferredZone,
       aadhaarVerified: Boolean(aadhaar),
       isRetainRider: true,
       existingRiderId: r?.id || null,
@@ -288,18 +318,21 @@ function RetainRiderInner() {
     // If the rider has NOT ended the ride, auto-assign the active rental's vehicle+battery.
     const active = await prefillFromActiveRental({ mobileDigits: phone });
     if (active?.id) {
+      const activeMeta = parseMaybeJson(active?.meta) || {};
       updateForm({
         activeRentalId: active.id,
         rentalStart: toDateTimeLocal(active.start_time),
         rentalPackage: active.rental_package || formData.rentalPackage || "daily",
         bikeId: String(active.bike_id || "").trim() || formData.bikeId,
         batteryId: String(active.current_battery_id || active.battery_id || "").trim() || formData.batteryId,
+        operationalZone:
+          inferredZone || (preferZoneFromRentals ? String(activeMeta?.zone || "").trim() : "") || "",
       });
       return;
     }
 
     // Otherwise, prefill from the last rental.
-    await prefillFromLastRental(r?.id);
+    await prefillFromLastRental(r?.id, { preferZone: preferZoneFromRentals });
   };
 
   const upiId = import.meta.env.VITE_EVEGAH_UPI_ID || "";
@@ -375,9 +408,20 @@ function RetainRiderInner() {
 
   const handleComplete = async () => {
     setPaymentError("");
+    setRetainSuccess(false);
 
     if (!formData.existingRiderId) {
       setPaymentError("Select a rider before completing payment.");
+      return;
+    }
+
+    if (!String(formData.name || "").trim()) {
+      setPaymentError("Rider name is missing. Re-select the rider.");
+      return;
+    }
+
+    if (String(formData.phone || "").replace(/\D/g, "").slice(0, 10).length !== 10) {
+      setPaymentError("Valid 10-digit mobile number is required.");
       return;
     }
 
@@ -442,6 +486,7 @@ function RetainRiderInner() {
             accessories: Array.isArray(formData.accessories) ? formData.accessories : [],
             other_accessories: formData.otherAccessories || null,
             meta: {
+              zone: formData.operationalZone || null,
               employee_uid: user?.uid || null,
               employee_email: user?.email || null,
             },
@@ -455,6 +500,7 @@ function RetainRiderInner() {
       alert(isUpdatingActiveRental ? "Rental updated" : "Payment recorded");
       setCompleted(true);
       setRegistration({ id: formData.existingRiderId }); // minimal registration for receipt
+      setRetainSuccess(true);
     } catch (e) {
       setPaymentError(String(e?.message || e || "Unable to save payment"));
     } finally {
@@ -473,6 +519,12 @@ function RetainRiderInner() {
     name: snapshot?.name || snapshot?.fullName || "",
     phone: snapshot?.phone || "",
     mobile: snapshot?.mobile || snapshot?.phone || "",
+    aadhaar: snapshot?.aadhaar || "",
+    dob: snapshot?.dob || null,
+    gender: snapshot?.gender || "",
+    reference: snapshot?.reference || "",
+    permanentAddress: snapshot?.permanentAddress || "",
+    temporaryAddress: snapshot?.temporaryAddress || "",
     operationalZone: snapshot?.operationalZone || snapshot?.zone || "",
     agreementAccepted: Boolean(snapshot?.agreementAccepted),
     agreementDate: snapshot?.agreementDate || null,
@@ -551,14 +603,19 @@ function RetainRiderInner() {
   return (
     <EmployeeLayout>
       <div className="mx-auto w-full max-w-5xl space-y-6">
-        <div>
+        <div className="rounded-3xl border border-evegah-border bg-white p-6 shadow-card">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
             Riders
           </p>
-          <h1 className="text-2xl font-semibold text-evegah-text">Retain Rider</h1>
-          <p className="text-sm text-gray-500">
-            Find an existing rider, update rental details, and take payment.
-          </p>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-evegah-text">Retain Rider</h1>
+              <p className="text-sm text-gray-600">
+                Find an existing rider, update rental details, and take payment.
+              </p>
+            </div>
+            <div className="text-xs text-gray-500">Search • Assign • Payment</div>
+          </div>
         </div>
 
         <div className="card space-y-4">
@@ -647,6 +704,7 @@ function RetainRiderInner() {
                 onClick={() => {
                   resetForm();
                   setResults([]);
+                  setRetainSuccess(false);
                 }}
               >
                 Change Rider
@@ -1130,10 +1188,7 @@ function RetainRiderInner() {
                   <button
                     type="button"
                     className="btn-primary disabled:opacity-60"
-                    onClick={async () => {
-                      await handleComplete();
-                      setRetainSuccess(true);
-                    }}
+                    onClick={handleComplete}
                     disabled={savingPayment}
                   >
                     {savingPayment ? "Saving..." : "Complete"}
@@ -1141,7 +1196,7 @@ function RetainRiderInner() {
                 </div>
 
                 {paymentError ? <p className="error">{paymentError}</p> : null}
-                {retainSuccess && (
+                {retainSuccess && !paymentError && (
                   <div className="mt-4">
                     <div className="text-green-600 font-semibold mb-2">Rider retained successfully</div>
                     <div className="flex gap-2">

@@ -22,7 +22,7 @@ export default function DeleteModal({ rider, bulkIds = [], close, reload, onBulk
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-6">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-6 z-50">
       <div className="bg-white p-6 rounded-xl w-[380px] shadow-lg text-center">
         <h2 className="text-xl font-semibold mb-4">
           {isBulk ? "Delete Selected Riders?" : "Delete Rider?"}

@@ -33,11 +33,84 @@ function toInr(value) {
   return `₹ ${n.toFixed(2)}`;
 }
 
+let cachedRupeePngDataUrl = null;
+
+function getRupeePngDataUrl() {
+  if (cachedRupeePngDataUrl) return cachedRupeePngDataUrl;
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 96;
+    canvas.height = 96;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#000000";
+
+    // Use common system fonts; the browser will pick one that supports ₹.
+    ctx.font = '700 72px "Noto Sans", "Segoe UI Symbol", "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("₹", canvas.width / 2, canvas.height / 2 + 2);
+
+    cachedRupeePngDataUrl = canvas.toDataURL("image/png");
+    return cachedRupeePngDataUrl;
+  } catch {
+    return null;
+  }
+}
+
+function getCellPaddingLeft(cell) {
+  try {
+    if (cell && typeof cell.padding === "function") return Number(cell.padding("left")) || 0;
+  } catch {
+    // ignore
+  }
+  return 0;
+}
+
+function bumpLeftPadding(cell, deltaMm) {
+  const current = cell?.styles?.cellPadding;
+  if (typeof current === "number") {
+    cell.styles.cellPadding = { top: current, right: current, bottom: current, left: current + deltaMm };
+    return;
+  }
+  const left = Number(current?.left ?? 0) || 0;
+  const top = Number(current?.top ?? 0) || 0;
+  const right = Number(current?.right ?? 0) || 0;
+  const bottom = Number(current?.bottom ?? 0) || 0;
+  cell.styles.cellPadding = { top, right, bottom, left: left + deltaMm };
+}
+
 const BRAND = {
-  primary: [26, 87, 74],
+  // Matches Tailwind `evegah.primary` / logo primary: #2A195C
+  primary: [42, 25, 92],
+  // Light purple used for subtle accents: #E7E0FF
+  primaryLight: [231, 224, 255],
   border: [210, 210, 210],
   mutedText: [90, 90, 90],
 };
+
+const RULES_AND_REGULATIONS_BULLETS = [
+  "ID Documentation: Renters must provide a valid government-issued ID, which will be photocopied for verification purposes. Evegah guarantees that IDs will be used solely for verification purposes. All personal data will be managed in strict compliance with applicable privacy laws and regulations.",
+  "Usage Instructions: Evegah will provide clear instructions on the proper use of the e-bike, including details on electric assist technology and battery charging procedures.",
+  "Pre-Ride Inspection: Renters are required to inspect the e-bike for any visible defects or issues before use and report them to Evegah immediately.",
+  "General Care: Renters are responsible for maintaining the e-bike in good condition to ensure it remains functional for the next user.",
+  "Security and Safety: Renters must secure the e-bike with a lock when not in use. The e-bike must not be used in hazardous environments, such as lakes, muddy trails, or unsafe terrains. In the event of theft, the Renter is responsible for reimbursing Evegah for the full value of the e-bike as per the current price list.",
+  "E-bike Condition on Return: E-bikes must be returned in the same technical condition as they were rented. Any defects or damages must be reported immediately to Evegah Customer Service/Helpline Number: 8980966376, 8980966343.",
+  "Accessories: Renters will be charged for the loss or damage of accessories based on current market prices.",
+  "Damages and Liability: Renters are liable for damages caused by improper use and will be charged accordingly. Renters are also responsible for any third-party damages resulting from their negligence.",
+  "Personal Health and Safety: Evegah does not provide personal health or accident insurance. Renters assume full responsibility for any injury, disability, or fatality resulting from e-bike use. Evegah will not be held liable for such incidents.",
+  "Protection of Electric Components: Renters must protect the e-bike's electric components, particularly during wet or extreme weather conditions.",
+  "Late Return: E-bikes returned more than one day after the agreed return time will result in the forfeiture of the security deposit.",
+  "Subleasing: Subleasing or re-renting the e-bike to another party is strictly prohibited.",
+  "Single Rider Use: E-bikes are designed for single riders only. Carrying passengers is not allowed.",
+  "Smoking Prohibited: Smoking is strictly forbidden while using the e-bike.",
+  "Intoxication Prohibited: Riding an e-bike under the influence of alcohol is strictly prohibited.",
+  "Traffic Rules: Rider must follow all traffic and safety rules while riding.",
+  "Termination of Rental: Company can terminate rental on misuse of eBike and rental pay.",
+];
 
 async function downscaleDataUrl(dataUrl, {
   maxWidth = 1000,
@@ -155,7 +228,7 @@ function drawHeader(doc, { receiptNo, generatedAt, logoDataUrl }) {
   // Accent bars (similar layout to provided sample)
   doc.setFillColor(...BRAND.primary);
   doc.rect(margin, headerBottom - 10, pageWidth - margin * 2, 8, "F");
-  doc.setFillColor(230, 243, 239);
+  doc.setFillColor(...BRAND.primaryLight);
   doc.rect(margin, headerBottom - 2, pageWidth - margin * 2, 2, "F");
 
   return headerBottom;
@@ -165,6 +238,7 @@ function addSection(doc, title, rows) {
   const margin = 14;
   const pageWidth = doc.internal.pageSize.getWidth();
   const startY = (doc.lastAutoTable?.finalY || 44) + 10;
+  const rupeePng = getRupeePngDataUrl();
 
   doc.setFillColor(...BRAND.primary);
   doc.rect(margin, startY, pageWidth - margin * 2, 8, "F");
@@ -184,6 +258,37 @@ function addSection(doc, title, rows) {
       1: { cellWidth: pageWidth - margin * 2 - 58 },
     },
     margin: { left: margin, right: margin },
+    didParseCell: (data) => {
+      // jsPDF default fonts can render ₹ as a stray glyph (often "1").
+      // If we detect ₹, remove it from text and draw it as an image in didDrawCell.
+      const raw = typeof data?.cell?.raw === "string" ? data.cell.raw : "";
+      if (!rupeePng || !raw.includes("₹")) return;
+
+      data.cell.__hasRupeeGlyph = true;
+      const cleaned = raw.replace("₹", "").trimStart();
+      data.cell.text = [cleaned];
+
+      // Make space for the ₹ icon on the left.
+      bumpLeftPadding(data.cell, 6);
+    },
+    didDrawCell: (data) => {
+      if (!rupeePng || !data?.cell?.__hasRupeeGlyph) return;
+
+      const cell = data.cell;
+      const paddingLeft = getCellPaddingLeft(cell);
+
+      // Draw a small ₹ icon vertically centered in the cell.
+      const iconW = 3.4;
+      const iconH = 4.4;
+      const x = cell.x + paddingLeft - 5.5; // align icon into the space created by bumpLeftPadding
+      const y = cell.y + (cell.height - iconH) / 2;
+
+      try {
+        doc.addImage(rupeePng, "PNG", x, y, iconW, iconH);
+      } catch {
+        // ignore
+      }
+    },
   });
 }
 
@@ -293,6 +398,10 @@ export async function downloadRiderReceiptPdf({ formData, registration } = {}) {
     "Charges may apply for damages, missing accessories, late returns, or policy violations.",
     "For corrections or support, contact the EVegah team with the receipt number.",
   ]);
+
+  // Rules & Regulations (Rental Agreement)
+  ensureSpace(doc, 22);
+  addBulletedSection(doc, "Rules & Regulations", RULES_AND_REGULATIONS_BULLETS);
 
   // Signature (optional)
   const signatureDataUrl =

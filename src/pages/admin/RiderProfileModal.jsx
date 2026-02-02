@@ -142,6 +142,24 @@ export default function RiderProfileModal({ rider, close }) {
   const rideMeta = useMemo(() => parseMaybeJson(currentRide?.meta) || {}, [currentRide?.meta]);
   const riderMeta = useMemo(() => parseMaybeJson(rider?.meta) || {}, [rider?.meta]);
 
+  const fallbackZone = useMemo(() => {
+    const candidates = [];
+    if (rideMeta?.zone) candidates.push(rideMeta.zone);
+    if (riderMeta?.zone) candidates.push(riderMeta.zone);
+
+    // If selected ride has no zone (common for older retain rentals), scan other rides.
+    (Array.isArray(rides) ? rides : []).forEach((row) => {
+      const meta = parseMaybeJson(row?.meta) || {};
+      if (meta?.zone) candidates.push(meta.zone);
+    });
+
+    for (const c of candidates) {
+      const z = normalizeZone(c);
+      if (z) return z;
+    }
+    return "";
+  }, [rideMeta?.zone, riderMeta?.zone, rides, normalizeZone, parseMaybeJson]);
+
   const riderCode = useMemo(() => {
     const direct = String(rider?.rider_code || "").trim();
     if (direct) return direct;
@@ -182,7 +200,7 @@ export default function RiderProfileModal({ rider, close }) {
         aadhaar: rider?.aadhaar,
         dob: rider?.dob,
         gender: rider?.gender,
-        operationalZone: normalizeZone(rentalMeta?.zone) || normalizeZone(riderMeta?.zone) || "",
+        operationalZone: normalizeZone(rentalMeta?.zone) || fallbackZone || "",
         reference: rider?.reference,
         permanentAddress: rider?.permanent_address,
         temporaryAddress: rider?.temporary_address,
@@ -246,9 +264,8 @@ export default function RiderProfileModal({ rider, close }) {
   }, [rides]);
 
   const zoneLabel = useMemo(() => {
-    const z = normalizeZone(rideMeta?.zone);
-    return z || "N/A";
-  }, [rideMeta?.zone]);
+    return fallbackZone || "N/A";
+  }, [fallbackZone]);
 
   const docsByKind = useMemo(() => {
     const grouped = {};

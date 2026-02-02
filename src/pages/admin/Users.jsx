@@ -179,10 +179,10 @@ export default function AdminUsers() {
   };
 
   return (
-    <div className="flex bg-gray-100 min-h-screen">
+    <div className="admin-viewport flex bg-gray-100 min-h-screen">
       <AdminSidebar />
 
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-10 pb-0 space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold">Users</h1>
           <button type="button" className="px-4 py-2 rounded-xl border bg-white" onClick={load}>

@@ -367,7 +367,7 @@ export default function Step2Identity() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="label">E-bike Model</label>
+            <label className="label">Vehicle Model</label>
             <select
               className="select"
               value={formData.bikeModel || "MINK"}
@@ -385,7 +385,7 @@ export default function Step2Identity() {
           </div>
 
           <div>
-            <label className="label">E-Bike ID No </label>
+            <label className="label">Vehicle ID No </label>
             <div ref={vehicleDropdownRef} className="relative">
               <button
                 type="button"

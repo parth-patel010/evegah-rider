@@ -77,7 +77,7 @@ export default function Step3Agreement() {
                 disabled
               />
               <span>
-                I have read &amp; understand the Evegah E-Bike Rental Agreement: Rules and Regulations, and I agree to return the e-bike in good condition. <span className="text-red-500">*</span>
+                I have read &amp; understand the Evegah E-Bike Rental Agreement: Rules and Regulations, and I agree to return the Vehicle in good condition. <span className="text-red-500">*</span>
               </span>
             </label>
             <div className="mt-3 flex flex-wrap items-center gap-3">

@@ -5,8 +5,6 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -201,38 +199,6 @@ export default function BatterySwaps() {
     // ~28px per row keeps labels readable; capped by scroll container anyway.
     return Math.max(260, usageChartRows.length * 28);
   }, [usageChartRows.length]);
-
-  const swapsTrend = useMemo(() => {
-    const days = 14;
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (days - 1));
-
-    const series = [];
-    const index = new Map();
-    for (let i = 0; i < days; i += 1) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const row = { key, label, swaps: 0 };
-      index.set(key, row);
-      series.push(row);
-    }
-
-    const all = Array.isArray(rows) ? rows : [];
-    for (const r of all) {
-      if (!r?.swapped_at) continue;
-      const t = new Date(r.swapped_at);
-      if (Number.isNaN(t.getTime())) continue;
-      const key = t.toISOString().slice(0, 10);
-      const hit = index.get(key);
-      if (hit) hit.swaps += 1;
-    }
-
-    return series;
-  }, [rows]);
 
   const riderGroups = useMemo(() => {
     const all = Array.isArray(rows) ? rows : [];
@@ -1146,29 +1112,6 @@ export default function BatterySwaps() {
           </div>
 
           <div className="xl:col-span-7 space-y-4">
-            <div className="card border-0 bg-white shadow-card">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-evegah-text">
-                    Swaps Trend
-                  </h2>
-                  <p className="text-sm text-gray-500">Last 14 days.</p>
-                </div>
-              </div>
-
-              <div className="mt-4" style={{ height: 220 }}>
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={swapsTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="swaps" stroke="#4F46E5" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
             <div className="card border-0 bg-white shadow-card">
               <div className="flex items-start justify-between gap-4">
                 <div>

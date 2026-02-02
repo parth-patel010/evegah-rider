@@ -184,7 +184,10 @@ function ZoneRadialCard({ counts, loading }) {
   // Concentric ring settings (SVG coordinate system)
   const cx = 90;
   const cy = 90;
-  const radii = [70, 58, 46, 34];
+  // Keep radii count in sync with zones to avoid NaN SVG values.
+  const radii = Array.from({ length: zones.length }, (_v, idx) => 70 - idx * 12).filter(
+    (r) => r > 0
+  );
   const strokeWidth = 10;
 
   const percentFor = (value) => {
@@ -198,7 +201,7 @@ function ZoneRadialCard({ counts, loading }) {
       <div className="flex items-center justify-center">
         <div className="relative">
           <svg width="180" height="180" viewBox="0 0 180 180">
-            {zones.map((z, idx) => {
+            {zones.slice(0, radii.length).map((z, idx) => {
               const r = radii[idx];
               const c = 2 * Math.PI * r;
               const pct = percentFor(safeCounts[z.key]);

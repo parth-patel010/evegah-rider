@@ -664,7 +664,7 @@ export default function Step1RiderDetails() {
                 }
               }}
             />
-            My temporary/mailing address is the same as my permanent address.
+            My Resident address is the same as my permanent address.
           </label>
         </div>
 

@@ -29,7 +29,7 @@ import ProtectedRouteEmployee from "./components/ProtectedRouteEmployee";
 export default function App() {
   return (
     <>
-      <div className="relative z-10 min-h-screen pb-16">
+      <div className="relative z-10 min-h-screen">
         <BrowserRouter>
           <Routes>
             {/* ---------- PUBLIC ---------- */}
