@@ -46,8 +46,8 @@ export async function apiFetch(path, options = {}) {
   if (!res.ok) {
     const message =
       (data && typeof data === "object" && data.error) ? data.error :
-      (typeof data === "string" && data) ? data :
-      `Request failed (${res.status})`;
+        (typeof data === "string" && data) ? data :
+          `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -90,8 +90,8 @@ export async function apiFetchBlob(path, options = {}) {
 
     const message =
       (data && typeof data === "object" && data.error) ? data.error :
-      (typeof data === "string" && data) ? data :
-      `Request failed (${res.status})`;
+        (typeof data === "string" && data) ? data :
+          `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -108,4 +108,23 @@ export function apiUrl(path) {
   const p = String(path || "");
   if (/^(https?:)?\/\//i.test(p) || /^data:/i.test(p) || /^blob:/i.test(p)) return p;
   return `${API_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
+}
+
+/** Public config (UPI ID, payee name) from backend .env – no auth required. Cached per load. */
+let publicConfigCache = null;
+export async function getPublicConfig() {
+  if (publicConfigCache) return publicConfigCache;
+  try {
+    const url = apiUrl("/api/config");
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    publicConfigCache = {
+      upiId: data?.upiId ?? null,
+      payeeName: data?.payeeName ?? "Evegah",
+    };
+    return publicConfigCache;
+  } catch {
+    publicConfigCache = { upiId: null, payeeName: "Evegah" };
+    return publicConfigCache;
+  }
 }

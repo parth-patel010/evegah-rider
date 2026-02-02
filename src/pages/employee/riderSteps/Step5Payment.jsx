@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import { useRiderForm } from "../useRiderForm";
-import { apiFetch } from "../../../config/api";
+import { apiFetch, getPublicConfig } from "../../../config/api";
 import { downloadRiderReceiptPdf } from "../../../utils/riderReceiptPdf";
 import useAuth from "../../../hooks/useAuth";
 
@@ -19,9 +19,14 @@ export default function Step5Payment() {
   const [whatsAppStatus, setWhatsAppStatus] = useState("");
   const [whatsAppFallback, setWhatsAppFallback] = useState(null);
 
-  const configuredUpiId = import.meta.env.VITE_EVEGAH_UPI_ID;
+  const [publicConfig, setPublicConfig] = useState({ upiId: null, payeeName: "Evegah" });
+  useEffect(() => {
+    getPublicConfig().then(setPublicConfig);
+  }, []);
+
+  const configuredUpiId = import.meta.env.VITE_EVEGAH_UPI_ID || publicConfig.upiId;
   const defaultUpiId = "temp.evegah@okaxis";
-  const payeeName = import.meta.env.VITE_EVEGAH_PAYEE_NAME || "Evegah";
+  const payeeName = import.meta.env.VITE_EVEGAH_PAYEE_NAME || publicConfig.payeeName || "Evegah";
   const iciciEnabled = import.meta.env.VITE_ICICI_ENABLED === "true";
 
   const amount = Number(formData.totalAmount || 0);
@@ -391,7 +396,7 @@ export default function Step5Payment() {
                 )}
                 {!configuredUpiId ? (
                   <p className="text-sm text-red-600">
-                    UPI QR is not configured, showing a temporary placeholder. Set `VITE_EVEGAH_UPI_ID` in your `.env` to use the real business QR.
+                    UPI QR is not configured. Set <code>VITE_EVEGAH_UPI_ID</code> in frontend <code>.env</code> or <code>EVEGAH_UPI_ID</code> (or <code>ICICI_VPA</code>) in backend <code>server/.env</code>.
                   </p>
                 ) : null}
               </>
@@ -483,7 +488,7 @@ export default function Step5Payment() {
               className={
                 "text-sm " +
                 (whatsAppStatus.toLowerCase().includes("sent") ||
-                whatsAppStatus.toLowerCase().includes("opened")
+                  whatsAppStatus.toLowerCase().includes("opened")
                   ? "text-green-700"
                   : "text-red-600")
               }
