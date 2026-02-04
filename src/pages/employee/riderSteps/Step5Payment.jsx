@@ -33,11 +33,14 @@ export default function Step5Payment() {
   const cashAmount = Number(formData.cashAmount || 0);
   const onlineAmount = Number(formData.onlineAmount || 0);
   const totalPaid = cashAmount + onlineAmount;
-  const paymentModeLabel = formData.paymentMode
-    ? formData.paymentMode === "split"
-      ? "Split (Cash + Online)"
-      : `${formData.paymentMode.charAt(0).toUpperCase()}${formData.paymentMode.slice(1)}`
-    : "-";
+  const paymentMode = formData.paymentMode || "cash";
+  const paymentModeLabel = paymentMode === "split"
+    ? "Split (Cash + Online)"
+    : `${paymentMode.charAt(0).toUpperCase()}${paymentMode.slice(1)}`;
+
+  // For QR generation: use onlineAmount for split mode, total amount for online mode
+  const qrAmount = paymentMode === "split" ? onlineAmount : (paymentMode === "online" ? amount : 0);
+  const shouldShowQR = paymentMode === "online" || (paymentMode === "split" && onlineAmount > 0);
 
   const [iciciQrData, setIciciQrData] = useState(null);
   const [iciciQrLoading, setIciciQrLoading] = useState(false);
@@ -67,19 +70,23 @@ export default function Step5Payment() {
 
   const effectiveUpiId = configuredUpiId || defaultUpiId;
   const upiPayload = useMemo(() => {
-    if (!effectiveUpiId) return "";
+    if (!effectiveUpiId || !shouldShowQR || !qrAmount) return "";
     const params = new URLSearchParams({
       pa: effectiveUpiId,
       pn: payeeName,
-      am: amount ? String(amount) : "",
+      am: String(qrAmount),
       cu: "INR",
     });
     return `upi://pay?${params.toString()}`;
-  }, [effectiveUpiId, payeeName, amount]);
+  }, [effectiveUpiId, payeeName, qrAmount, shouldShowQR]);
 
-  // Generate ICICI QR when ICICI is enabled.
+  // Generate ICICI QR when ICICI is enabled and QR should be shown.
   useEffect(() => {
-    if (!iciciEnabled || !amount || !formData.name) return;
+    if (!iciciEnabled || !shouldShowQR || !qrAmount || !formData.name) {
+      setIciciQrData(null);
+      setIciciQrError("");
+      return;
+    }
 
     let cancelled = false;
 
@@ -90,7 +97,7 @@ export default function Step5Payment() {
         const response = await apiFetch("/api/payments/icici/qr", {
           method: "POST",
           body: {
-            amount,
+            amount: qrAmount,
             // ICICI expects merchantTranId + billNumber in the encrypted payload.
             merchantTranId: `EVG${Date.now()}${Math.random().toString(16).slice(2, 6)}`.slice(0, 35),
             billNumber: `EVG-${Date.now()}`.slice(0, 50),
@@ -109,7 +116,7 @@ export default function Step5Payment() {
     return () => {
       cancelled = true;
     };
-  }, [iciciEnabled, amount, formData.name]);
+  }, [iciciEnabled, shouldShowQR, qrAmount, formData.name]);
 
   const buildReceiptPayload = (snapshot) => ({
     fullName: snapshot?.fullName || snapshot?.name || "",
@@ -350,56 +357,67 @@ export default function Step5Payment() {
         <div>
           <div className="rounded-xl border border-evegah-border bg-gray-50 p-4 space-y-3">
             <h4 className="font-medium text-evegah-text">Payment QR</h4>
-            <p className="text-sm text-gray-500">
-              Scan to pay via UPI.
-            </p>
 
-            {iciciEnabled ? (
+            {shouldShowQR ? (
               <>
-                {iciciQrLoading && (
-                  <div className="flex items-center justify-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-evegah-primary"></div>
-                    <span className="ml-2 text-sm text-gray-500">Generating QR...</span>
-                  </div>
-                )}
-                {iciciQrError && (
-                  <p className="text-sm text-red-600">
-                    ICICI QR generation failed: {iciciQrError}
-                  </p>
-                )}
-                {iciciQrData?.qrCode && (
-                  <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
-                    {iciciQrData.qrCode.startsWith('data:') || iciciQrData.qrCode.startsWith('http') ? (
-                      <img src={iciciQrData.qrCode} alt="ICICI Payment QR" className="w-45 h-45" />
-                    ) : (
-                      <img src={`data:image/png;base64,${iciciQrData.qrCode}`} alt="ICICI Payment QR" className="w-45 h-45" />
+                <p className="text-sm text-gray-500">
+                  {paymentMode === "split"
+                    ? `Scan to pay ₹${onlineAmount} via UPI (remaining ₹${cashAmount} in cash).`
+                    : "Scan to pay via UPI."}
+                </p>
+
+                {iciciEnabled ? (
+                  <>
+                    {iciciQrLoading && (
+                      <div className="flex items-center justify-center p-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-evegah-primary"></div>
+                        <span className="ml-2 text-sm text-gray-500">Generating QR...</span>
+                      </div>
                     )}
-                  </div>
-                )}
-                {iciciQrData?.qrString && !iciciQrData?.qrCode && (
-                  <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
-                    <QRCodeCanvas value={iciciQrData.qrString} size={180} />
-                  </div>
-                )}
-                {!iciciQrLoading && !iciciQrError && !iciciQrData?.qrCode && (
-                  <p className="text-sm text-gray-500">
-                    ICICI QR not available
-                  </p>
+                    {iciciQrError && (
+                      <p className="text-sm text-red-600">
+                        ICICI QR generation failed: {iciciQrError}
+                      </p>
+                    )}
+                    {iciciQrData?.qrCode && (
+                      <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
+                        {iciciQrData.qrCode.startsWith('data:') || iciciQrData.qrCode.startsWith('http') ? (
+                          <img src={iciciQrData.qrCode} alt="ICICI Payment QR" className="w-45 h-45" />
+                        ) : (
+                          <img src={`data:image/png;base64,${iciciQrData.qrCode}`} alt="ICICI Payment QR" className="w-45 h-45" />
+                        )}
+                      </div>
+                    )}
+                    {iciciQrData?.qrString && !iciciQrData?.qrCode && (
+                      <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
+                        <QRCodeCanvas value={iciciQrData.qrString} size={180} />
+                      </div>
+                    )}
+                    {!iciciQrLoading && !iciciQrError && !iciciQrData?.qrCode && !iciciQrData?.qrString && (
+                      <p className="text-sm text-gray-500">
+                        ICICI QR not available
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {upiPayload && (
+                      <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
+                        <QRCodeCanvas value={upiPayload} size={180} />
+                      </div>
+                    )}
+                    {!configuredUpiId ? (
+                      <p className="text-sm text-red-600">
+                        UPI QR is not configured. Set <code>VITE_EVEGAH_UPI_ID</code> in frontend <code>.env</code> or <code>EVEGAH_UPI_ID</code> (or <code>ICICI_VPA</code>) in backend <code>server/.env</code>.
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </>
             ) : (
-              <>
-                {upiPayload && (
-                  <div className="rounded-xl border border-evegah-border bg-white p-4 inline-flex">
-                    <QRCodeCanvas value={upiPayload} size={180} />
-                  </div>
-                )}
-                {!configuredUpiId ? (
-                  <p className="text-sm text-red-600">
-                    UPI QR is not configured. Set <code>VITE_EVEGAH_UPI_ID</code> in frontend <code>.env</code> or <code>EVEGAH_UPI_ID</code> (or <code>ICICI_VPA</code>) in backend <code>server/.env</code>.
-                  </p>
-                ) : null}
-              </>
+              <p className="text-sm text-gray-500">
+                Cash payment mode selected. No QR code required.
+              </p>
             )}
 
             <div className="text-sm text-evegah-text space-y-1">
@@ -409,7 +427,7 @@ export default function Step5Payment() {
               <div>
                 <span className="text-gray-500">Payment Mode:</span> {paymentModeLabel}
               </div>
-              {formData.paymentMode === "split" ? (
+              {paymentMode === "split" ? (
                 <>
                   <div>
                     <span className="text-gray-500">Cash Paid:</span> ₹{cashAmount}
@@ -420,8 +438,21 @@ export default function Step5Payment() {
                   <div>
                     <span className="text-gray-500">Total Paid:</span> ₹{totalPaid}
                   </div>
+                  {shouldShowQR && (
+                    <div>
+                      <span className="text-gray-500">QR Amount:</span> ₹{qrAmount}
+                    </div>
+                  )}
                 </>
-              ) : null}
+              ) : paymentMode === "cash" ? (
+                <div>
+                  <span className="text-gray-500">Cash Paid:</span> ₹{cashAmount}
+                </div>
+              ) : (
+                <div>
+                  <span className="text-gray-500">Online Paid:</span> ₹{onlineAmount}
+                </div>
+              )}
             </div>
           </div>
         </div>
